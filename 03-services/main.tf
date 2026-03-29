@@ -7,8 +7,8 @@ resource "random_password" "k3s_token" {
 resource "aws_instance" "jump_server" {
   ami                    = data.aws_ami.ubuntu_x86.id
   instance_type          = "t3.micro"
-  vpc_security_group_ids = [data.terraform_remote_state.security.outputs.jump_sg_id]
-  subnet_id              = data.terraform_remote_state.network.outputs.public_subnet_id
+  vpc_security_group_ids = [var.jump_sg_id]
+  subnet_id              = var.public_subnet_id
   key_name               = var.key_name
 
   tags = { Name = "JumpServer" }
@@ -18,8 +18,8 @@ resource "aws_instance" "jump_server" {
 resource "aws_instance" "master" {
   ami                    = data.aws_ami.ubuntu_arm.id
   instance_type          = "t4g.micro"
-  vpc_security_group_ids = [data.terraform_remote_state.security.outputs.k3s_sg_id]
-  subnet_id              = data.terraform_remote_state.network.outputs.private_subnet_id
+  vpc_security_group_ids = [var.k3s_sg_id]
+  subnet_id              = var.private_subnet_id
   key_name               = var.key_name
 
   user_data = <<-EOF
@@ -34,8 +34,8 @@ resource "aws_instance" "master" {
 resource "aws_instance" "worker_platform" {
   ami                    = data.aws_ami.ubuntu_arm.id
   instance_type          = "t4g.micro"
-  vpc_security_group_ids = [data.terraform_remote_state.security.outputs.k3s_sg_id]
-  subnet_id              = data.terraform_remote_state.network.outputs.private_subnet_id
+  vpc_security_group_ids = [var.k3s_sg_id]
+  subnet_id              = var.private_subnet_id
   key_name               = var.key_name
   depends_on             = [aws_instance.master]
 
@@ -51,8 +51,8 @@ resource "aws_instance" "worker_platform" {
 resource "aws_instance" "worker_monitoring" {
   ami                    = data.aws_ami.ubuntu_arm.id
   instance_type          = "t4g.micro"
-  vpc_security_group_ids = [data.terraform_remote_state.security.outputs.k3s_sg_id]
-  subnet_id              = data.terraform_remote_state.network.outputs.private_subnet_id
+  vpc_security_group_ids = [var.k3s_sg_id]
+  subnet_id              = var.private_subnet_id
   key_name               = var.key_name
   depends_on             = [aws_instance.master]
 
@@ -68,8 +68,8 @@ resource "aws_instance" "worker_monitoring" {
 resource "aws_instance" "worker_general" {
   ami                    = data.aws_ami.ubuntu_arm.id
   instance_type          = "t4g.micro"
-  vpc_security_group_ids = [data.terraform_remote_state.security.outputs.k3s_sg_id]
-  subnet_id              = data.terraform_remote_state.network.outputs.private_subnet_id
+  vpc_security_group_ids = [var.k3s_sg_id]
+  subnet_id              = var.private_subnet_id
   key_name               = var.key_name
   depends_on             = [aws_instance.master]
 

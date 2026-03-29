@@ -1,18 +1,10 @@
-.PHONY: all init apply destroy
+.PHONY: plan apply destroy
 
-all: apply
-
-init:
-	cd 01-network && terraform init
-	cd 02-security && terraform init
-	cd 03-services && terraform init
+plan:
+	terragrunt run --all plan
 
 apply:
-	cd 01-network && terraform apply -auto-approve
-	cd 02-security && terraform apply -auto-approve
-	cd 03-services && terraform apply -auto-approve
+	terragrunt run --all apply
 
 destroy:
-	cd 03-services && terraform destroy -auto-approve
-	cd 02-security && terraform destroy -auto-approve
-	cd 01-network && terraform destroy -auto-approve
+	terragrunt run --all destroy
