@@ -1,0 +1,11 @@
+# Terraform 관련 파일 제외
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+*.tfvars.json
+.terraform.lock.hcl
+
+# OS 관련 파일
+.DS_Store
+Thumbs.db
