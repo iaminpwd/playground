@@ -3,21 +3,23 @@ resource "random_password" "k3s_token" {
   special = false
 }
 
-data "aws_ami" "ubuntu_arm" {
-  most_recent = true
-  owners      = ["099720109477"]
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-arm64-server-*"]
-  }
+# 1. 점프 서버
+resource "aws_instance" "jump_server" {
+  ami                    = data.aws_ami.ubuntu_x86.id
+  instance_type          = "t3.micro"
+  vpc_security_group_ids = [data.terraform_remote_state.security.outputs.jump_sg_id]
+  subnet_id              = data.terraform_remote_state.network.outputs.public_subnet_id
+  key_name               = var.key_name
+
+  tags = { Name = "JumpServer" }
 }
 
-# 1. 마스터 노드
+# 2. K3s 마스터
 resource "aws_instance" "master" {
   ami                    = data.aws_ami.ubuntu_arm.id
   instance_type          = "t4g.micro"
-  vpc_security_group_ids = [var.sg_id]
-  subnet_id              = var.subnet_id
+  vpc_security_group_ids = [data.terraform_remote_state.security.outputs.k3s_sg_id]
+  subnet_id              = data.terraform_remote_state.network.outputs.private_subnet_id
   key_name               = var.key_name
 
   user_data = <<-EOF
@@ -28,12 +30,12 @@ resource "aws_instance" "master" {
   tags = { Name = "k3s-Master" }
 }
 
-# 2. Platform 워커 노드
+# 3. K3s 워커 - Platform
 resource "aws_instance" "worker_platform" {
   ami                    = data.aws_ami.ubuntu_arm.id
   instance_type          = "t4g.micro"
-  vpc_security_group_ids = [var.sg_id]
-  subnet_id              = var.subnet_id
+  vpc_security_group_ids = [data.terraform_remote_state.security.outputs.k3s_sg_id]
+  subnet_id              = data.terraform_remote_state.network.outputs.private_subnet_id
   key_name               = var.key_name
   depends_on             = [aws_instance.master]
 
@@ -45,12 +47,12 @@ resource "aws_instance" "worker_platform" {
   tags = { Name = "k3s-Worker-Platform" }
 }
 
-# 3. Monitoring 워커 노드
+# 4. K3s 워커 - Monitoring
 resource "aws_instance" "worker_monitoring" {
   ami                    = data.aws_ami.ubuntu_arm.id
   instance_type          = "t4g.micro"
-  vpc_security_group_ids = [var.sg_id]
-  subnet_id              = var.subnet_id
+  vpc_security_group_ids = [data.terraform_remote_state.security.outputs.k3s_sg_id]
+  subnet_id              = data.terraform_remote_state.network.outputs.private_subnet_id
   key_name               = var.key_name
   depends_on             = [aws_instance.master]
 
@@ -62,12 +64,12 @@ resource "aws_instance" "worker_monitoring" {
   tags = { Name = "k3s-Worker-Monitoring" }
 }
 
-# 4. 일반 Worker 노드
+# 5. K3s 워커 - General
 resource "aws_instance" "worker_general" {
   ami                    = data.aws_ami.ubuntu_arm.id
   instance_type          = "t4g.micro"
-  vpc_security_group_ids = [var.sg_id]
-  subnet_id              = var.subnet_id
+  vpc_security_group_ids = [data.terraform_remote_state.security.outputs.k3s_sg_id]
+  subnet_id              = data.terraform_remote_state.network.outputs.private_subnet_id
   key_name               = var.key_name
   depends_on             = [aws_instance.master]
 

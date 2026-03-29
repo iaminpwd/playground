@@ -1,6 +1,7 @@
 resource "aws_security_group" "jump_server_sg" {
   name   = "jump-server-sg"
-  vpc_id = var.vpc_id
+  # data 블록을 통해 1단계의 출력을 참조
+  vpc_id = data.terraform_remote_state.network.outputs.vpc_id
 
   ingress {
     from_port   = 22
@@ -18,7 +19,7 @@ resource "aws_security_group" "jump_server_sg" {
 
 resource "aws_security_group" "k3s_cluster_sg" {
   name   = "k3s-cluster-sg"
-  vpc_id = var.vpc_id
+  vpc_id = data.terraform_remote_state.network.outputs.vpc_id
 
   ingress {
     from_port       = 22
