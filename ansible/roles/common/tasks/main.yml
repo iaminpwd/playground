@@ -1,0 +1,60 @@
+---
+# 1. OS 패키지 업데이트
+- name: apt 캐시 업데이트 및 필수 패키지 설치
+  apt:
+    update_cache: yes
+    name: [apt-transport-https, ca-certificates, curl, software-properties-common, nfs-common]
+    state: present
+
+# 2. 스왑 메모리 설정 (OCI 무료 티어의 안정성을 위해 필수)
+- name: 4GB 스왑 파일 생성 확인
+  command: fallocate -l 4G /swapfile
+  args:
+    creates: /swapfile
+
+- name: 스왑 파일 권한 설정
+  file:
+    path: /swapfile
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: 스왑 영역 설정 및 활성화
+  shell: |
+    if [ $(swapon --show | wc -l) -eq 0 ]; then
+      mkswap /swapfile
+      swapon /swapfile
+    fi
+  register: swap_res
+  changed_when: "'setting up swapspace' in swap_res.stdout"
+
+# 3. 150GB 독립 볼륨 마운트 (현업의 데이터 분리 전략)
+- name: 블록 볼륨 디바이스(/dev/sdb) 포맷 (ext4)
+  filesystem:
+    fstype: ext4
+    dev: /dev/sdb
+
+- name: 데이터 디렉토리 생성
+  file:
+    path: /data
+    state: directory
+    mode: '0755'
+
+- name: 볼륨 마운트 및 fstab 등록 (재부팅 시 자동 마운트)
+  mount:
+    path: /data
+    src: /dev/sdb
+    fstype: ext4
+    state: mounted
+
+# 4. 도커(Docker) 설치
+- name: 도커 설치 스크립트 실행
+  shell: curl -fsSL https://get.docker.com | sh
+  args:
+    creates: /usr/bin/docker
+
+- name: 현재 사용자를 docker 그룹에 추가
+  user:
+    name: ubuntu
+    groups: docker
+    append: yes

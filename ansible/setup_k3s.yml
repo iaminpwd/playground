@@ -1,0 +1,7 @@
+---
+- name: OCI 기반 K3s 클러스터 구축
+  hosts: blockchain_nodes
+  become: yes
+  roles:
+    - common  # 스왑 메모리 및 볼륨 마운트 먼저 수행
+    - k3s     # 그 다음 K3s 설치
