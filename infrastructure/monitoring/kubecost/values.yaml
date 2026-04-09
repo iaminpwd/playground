@@ -1,0 +1,91 @@
+# 전역(Global) 설정: 클러스터 식별자 지정 및 기존 외부 모니터링 시스템(Prometheus) 연동
+global:
+  clusterId: "finops-k3s"
+  prometheus:
+    enabled: false # 내장 프로메테우스를 끄고, 아래의 기존 프로메테우스 주소를 사용
+    fqdn: "http://prometheus-stack-kube-prom-prometheus.monitoring.svc.cluster.local:9090"
+  grafana:
+    enabled: false
+    proxy: false 
+
+# 프로메테우스 오퍼레이터 연동: 메트릭 수집(ServiceMonitor)과 알람 규칙(PrometheusRule) 활성화
+serviceMonitor:
+  enabled: true
+prometheusRule:
+  enabled: true
+
+# Kubecost 화면(UI) 설정: 현재는 사용하지 않도록(false) 처리. 파드의 최소/최대 자원(CPU, Memory)과 헬스체크(Probe) 정의
+kubecostFrontend:
+  enabled: false
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "10m"
+    limits:
+      memory: "128Mi"
+  livenessProbe:
+    initialDelaySeconds: 60
+    periodSeconds: 20
+
+# 클라우드 연동 정보: 비용 조회를 위해 연동할 AWS 계정(Account ID)과 리전 정보 매핑
+# 서비스가 서울(ap-northeast-2)에 있더라도, 단가를 제공하는 'AWS Pricing API'가 us-east-1 등 일부 리전에서만 지원되므로 정확한 요금 조회를 위해 us-east-1로 고정합니다.
+kubecostProductConfigs:
+  grafanaURL: ""
+  cloudProvider: "aws"
+  awsRegion: "us-east-1"
+  projectID: "719030485166" 
+  spotLabel: "node.kubernetes.io/capacity-type"
+  spotLabelValue: "spot"
+  
+# 미래 비용 예측 기능: 비활성화
+forecasting:
+  enabled: false
+
+# Kubecost 핵심 연산 엔진: 지표 보관 기간 및 컨테이너 자원 할당량 설정
+kubecostModel:
+  retentionDaily: 7
+  retentionHourly: 3
+  
+  # 노드 메모리 고갈 방지를 위한 극단적 연산 다이어트
+  etlDailyStoreDurationDays: 7     # 기존 91일 -> 7일치 과거 데이터만 연산
+  etlHourlyStoreDurationHours: 24  # 기존 49시간 -> 24시간치만 연산
+  maxQueryConcurrency: 1           # 기존 5 -> 동시 연산을 1개로 제한하여 메모리 스파이크 차단
+
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "20m"
+    limits:
+      memory: "256Mi"
+
+  extraEnv:
+    - name: AWS_REGION
+      value: "us-east-1"
+      
+# 데이터 집계 컴포넌트: 컨테이너 자원 할당량 설정
+kubecostAggregator:
+  resources:
+    requests:
+      memory: "256Mi"  
+      cpu: "20m"
+    limits:
+      memory: "512Mi"  
+# 커스텀 단가표: 클라우드 기본 단가 대신 별도 단가표 적용 여부 (비활성화)
+customPricing:
+  enabled: false
+
+# 스케줄링 제어: 'dedicated=monitoring' 설정이 된 전용 노드(Node)에만 이 파드들을 띄우도록 제한 (Taint/Toleration 적용)
+nodeSelector:
+  dedicated: "monitoring"
+  node.kubernetes.io/capacity-type: "on-demand"
+tolerations:
+  - key: dedicated
+    operator: Equal
+    value: monitoring
+    effect: NoSchedule
+
+# 스토리지(PV/PVC) 설정: 수집된 데이터를 유지하기 위해 AWS gp3 타입의 디스크 5GB를 동적 할당
+persistentVolume:
+  enabled: true
+  storageClass: "gp3"
+  size: 5Gi

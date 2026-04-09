@@ -1,0 +1,53 @@
+# DNS 공급자: Cloudflare 사용
+provider:
+  name: cloudflare
+
+# 감시 대상: Ingress 리소스에서 host 정보를 읽어 DNS 레코드 생성
+sources:
+  - ingress
+
+# upsert-only: 레코드 생성/수정만 허용, 삭제 방지
+policy: upsert-only
+# TXT 레코드로 소유권 관리 (다른 도구와 충돌 방지)
+registry: txt
+txtOwnerId: finops-k3s-external-dns
+# TXT 레코드 앞에 붙는 접두사 (소유권 식별용)
+txtPrefix: externaldns-
+# 관리 범위를 cyou.monster 도메인으로 제한
+domainFilters:
+  - cyou.monster
+
+# DNS 레코드 동기화 주기
+interval: 1m
+# Ingress 변경 이벤트 발생 시 즉시 동기화
+triggerLoopOnEvent: true
+
+env:
+  - name: CF_API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        # external-dns-secret 앱이 생성한 SealedSecret에서 토큰을 읽음
+        name: external-dns-cloudflare
+        key: apiToken
+
+serviceAccount:
+  create: true
+  name: external-dns
+
+# platform 전용 노드에만 스케줄링
+nodeSelector:
+  dedicated: platform
+
+tolerations:
+  - key: dedicated
+    operator: Equal
+    value: platform
+    effect: NoSchedule
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi

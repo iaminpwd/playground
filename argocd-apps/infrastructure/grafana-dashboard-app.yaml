@@ -1,0 +1,22 @@
+# Grafana 대시보드 ConfigMap 배포 앱
+# infrastructure/monitoring/prometheus 경로의 kustomization.yaml을 기준으로
+# FINOPS/OPS 대시보드 JSON을 ConfigMap으로 패키징하여 배포합니다.
+# Grafana sidecar가 grafana_dashboard: "1" 라벨이 달린 ConfigMap을 감지하여 자동으로 대시보드를 등록합니다.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana-dashboards
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/kt-cloud-finops-team5/finops-gitops-config
+    targetRevision: main
+    path: infrastructure/monitoring/prometheus
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

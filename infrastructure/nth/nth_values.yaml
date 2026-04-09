@@ -1,0 +1,61 @@
+# AWS Region 설정
+awsRegion: ap-northeast-2
+
+# 1. 핵심: SQS 모드 활성화
+# K3s는 이벤트 감지가 불안정하므로 반드시 SQS를 사용해야 함
+enableSqsTerminationDraining: true
+queueURL: "" # Argo CD 또는 Terraform에서 주입되는 SQS URL 확인
+
+# 2. 노드 강제 종료 (Self-Termination) 설정 - [가장 중요]
+# K3s에서 NotReady 노드가 안 내려가는 문제를 해결하는 핵심 옵션
+enableNodeTerminationHandler: true 
+checkASG: true
+# K8s가 노드 삭제를 못 하더라도 NTH가 직접 EC2를 Terminate 시킴
+enableSelfTermination: true 
+# ASG 상태 체크 주기를 짧게 잡아 대응 속도 향상
+asgSyncInterval: 30
+# K3s workers use custom node names (for example my-k3s-worker-spot-31),
+# so NTH should resolve the Kubernetes node through providerID / instance ID.
+useProviderId: true
+
+# 3. Drain 및 타임아웃 최적화
+deleteEmptyDirData: true
+ignoreDaemonSets: true
+taintNode: true 
+# 파드 종료 대기 시간 (Spot 2분 통보 고려)
+gracePeriod: 60
+# 전체 프로세스 타임아웃 (gracePeriod보다 길어야 함)
+nodeTerminationGracePeriod: 110 
+
+# 4. 배치 및 스케줄링 (K3s 노드 Taint 대응)
+nodeSelector:
+  dedicated: platform
+
+tolerations:
+  - key: dedicated
+    operator: Equal
+    value: platform
+    effect: NoSchedule
+  # 노드 상태가 나빠져도 NTH Pod가 축출되지 않도록 설정
+  - operator: Exists
+
+# 5. 서비스 계정
+serviceAccount:
+  create: true
+  name: aws-node-termination-handler
+
+# 6. 모니터링
+enablePrometheusServer: true
+prometheusServerPort: 9092
+service:
+  create: true
+
+serviceMonitor:
+  create: true
+  namespace: monitoring
+  labels:
+    release: prometheus-stack
+
+# 7. 추가 안전장치
+enableRebalanceMonitoring: true
+enableScheduledEventDraining: true

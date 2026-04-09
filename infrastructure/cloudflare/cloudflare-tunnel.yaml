@@ -1,0 +1,43 @@
+# Cloudflare Tunnel을 통해 클러스터 내부 서비스를 외부에 노출하는 Deployment
+# grafana.cyou.monster 등 도메인 접속 시 이 터널을 통해 내부 서비스로 라우팅됨
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflared-final
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloudflared
+  template:
+    metadata:
+      labels:
+        app: cloudflared
+    spec:
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:latest
+          command:
+            - cloudflared
+          args:
+            - tunnel
+            - --no-autoupdate
+            - run
+            # SealedSecret에서 주입된 터널 토큰으로 인증
+            - --token
+            - $(TUNNEL_TOKEN)
+          env:
+            - name: TUNNEL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  # cloudflare-token-sealedsecret.yaml에서 생성된 Secret
+                  name: cloudflare-token
+                  key: TUNNEL_TOKEN
+          resources:
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi

@@ -1,0 +1,48 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: notready-node-cleanup
+  namespace: node-cleanup
+spec:
+  # 5분마다 실행됩니다.
+  # 실행 시 worker-spot 노드 중 NotReady 상태가 10분 이상 지속된 노드를 자동 삭제합니다.
+  # 배경: Spot 노드가 AWS에 의해 회수되면 NotReady 상태로 남아 Cluster Autoscaler가
+  # "Cluster is not ready for autoscaling" 상태로 멈추는 문제가 발생합니다.
+  # 이 CronJob이 해당 노드를 정리하여 CA가 정상 동작하도록 유지합니다.
+  schedule: "*/5 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          # 위에서 정의한 node-cleanup 서비스 계정 사용
+          serviceAccountName: node-cleanup
+          # 실패 시 재시도 (성공 시 종료)
+          restartPolicy: OnFailure
+          containers:
+          - name: cleanup
+            # kubectl 명령어를 실행하기 위한 경량 이미지
+            image: bitnami/kubectl:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "=== Spot NotReady 노드 확인 ==="
+              # worker-spot 노드 중 NotReady 상태인 노드만 필터링
+              for NODE in $(kubectl get nodes | grep "worker-spot" | grep "NotReady" | awk '{print $1}'); do
+                # 노드가 NotReady 상태로 전환된 시각 조회
+                LAST_TRANSITION=$(kubectl get node $NODE -o jsonpath='{range .status.conditions[?(@.type=="Ready")]}{.lastTransitionTime}{end}')
+                NOW=$(date -u +%s)
+                # Linux/macOS 환경 모두 대응하는 날짜 파싱
+                NODE_TIME=$(date -u -d "$LAST_TRANSITION" +%s 2>/dev/null || date -u -j -f "%Y-%m-%dT%H:%M:%SZ" "$LAST_TRANSITION" +%s)
+                # NotReady 경과 시간(분) 계산
+                DIFF=$(( (NOW - NODE_TIME) / 60 ))
+                echo "$NODE: NotReady ${DIFF}분 경과"
+                if [ "$DIFF" -ge 10 ]; then
+                  # 10분 이상 NotReady 상태 지속 시 노드 삭제
+                  echo "$NODE 삭제 (${DIFF}분 경과)"
+                  kubectl delete node $NODE
+                else
+                  # 10분 미만이면 아직 복구 가능성이 있으므로 유지
+                  echo "$NODE 유지 (10분 미만)"
+                fi
+              done

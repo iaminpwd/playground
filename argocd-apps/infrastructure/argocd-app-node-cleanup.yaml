@@ -1,0 +1,23 @@
+# NotReady Spot 노드 자동 삭제 CronJob 배포 앱
+# 5분 주기로 실행되며 10분 이상 NotReady 상태인 worker-spot 노드를 자동으로 삭제합니다.
+# Spot 노드 대량 회수 시 CA가 "Cluster is not ready for autoscaling" 상태로 멈추는 문제를 예방합니다.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: node-cleanup
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/iaminpwd/argocd-test-repo.git
+    targetRevision: main
+    # CronJob, RBAC(ClusterRole/ClusterRoleBinding), ServiceAccount 리소스 포함
+    path: apps/node-cleanup
+  destination:
+    server: https://kubernetes.default.svc
+    # node-cleanup 전용 네임스페이스 (자동 생성)
+    namespace: node-cleanup
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

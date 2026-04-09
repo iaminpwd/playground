@@ -1,0 +1,34 @@
+# otel-shop 프론트엔드를 인터넷에 공개하는 ALB Ingress
+# shop.cyou.monster 도메인으로 접속 시 frontend-proxy 서비스로 라우팅됩니다.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: otel-shop-frontend
+  namespace: otel-shop
+  annotations:
+    # shared-public ALB 그룹에 포함 (ALB 공유로 비용 절감)
+    alb.ingress.kubernetes.io/group.name: shared-public
+    # 동일 그룹 내 라우팅 우선순위 (숫자가 낮을수록 먼저 처리)
+    alb.ingress.kubernetes.io/group.order: "20"
+    # 인터넷에서 직접 접근 가능한 외부용 ALB
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    # K3s 환경에서는 instance 타입 필수 (ip 타입은 VPC CNI 필요)
+    alb.ingress.kubernetes.io/target-type: instance
+    # ExternalDNS가 이 어노테이션을 읽어 Cloudflare에 DNS 레코드 자동 생성
+    external-dns.alpha.kubernetes.io/hostname: shop.cyou.monster
+    # Cloudflare 프록시 활성화 (DDoS 방어, CDN 캐싱 적용)
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  ingressClassName: alb
+  rules:
+    - host: shop.cyou.monster
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              # frontend-proxy는 NodePort 타입으로 ALB instance 모드와 연동
+              service:
+                name: frontend-proxy
+                port:
+                  number: 8080

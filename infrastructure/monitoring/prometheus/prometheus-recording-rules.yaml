@@ -1,0 +1,55 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: neo-finops-recording-rules
+  namespace: monitoring
+  labels:
+    app: kube-prometheus-stack
+    release: prometheus-stack
+spec:
+  groups:
+    - name: finops.recording.rules
+      interval: 1m  # 1분마다 아래 지표들을 미리 계산하여 저장 (대시보드 조회 속도 향상)
+      rules:
+        # [SLA 달성률] 전체 HTTP 요청 중 2xx 성공 응답 비율 (0~1 사이 값)
+        - record: sla_attainment_ratio
+          expr: >
+            sum(rate(http_server_duration_seconds_count{http_response_status_code=~"2.."}[5m]))
+            /
+            sum(rate(http_server_duration_seconds_count[5m]))
+
+        # [실시간 매출] 2xx 성공 요청 수 × 건당 단가($12.5) × 3600초 = 시간당 매출
+        - record: business_revenue_per_hour
+          expr: >
+            sum(rate(http_server_duration_seconds_count{http_response_status_code=~"2.."}[5m])) * 12.5 * 3600
+
+        # [인프라 비용] CPU 코어당 $0.048/hr + 메모리 GB당 $0.006/hr 기준으로 시간당 비용 계산
+        - record: infra_cost_per_hour
+          expr: >
+            (sum(kube_node_status_capacity{resource="cpu"}) * 0.048)
+            +
+            (sum(kube_node_status_capacity{resource="memory"}) / 1073741824 * 0.006)
+
+        # [거래당 비용] 시간당 인프라 비용 ÷ 시간당 처리 건수 = 주문 1건당 인프라 비용
+        - record: cost_per_transaction
+          expr: >
+            infra_cost_per_hour
+            /
+            (sum(rate(http_server_duration_seconds_count{http_response_status_code=~"2.."}[1h])) * 3600)
+
+        # [Spot 도입률] 전체 노드 중 spot 노드 비율 (노드 이름에 'spot' 포함 여부로 판별)
+        - record: spot_adoption_rate
+          expr: >
+            count(kube_node_info{node=~".*spot.*"})
+            /
+            count(kube_node_info) * 100
+
+        # [이상 점수] 파드별 실제 CPU 사용량 ÷ CPU Request 비율 (최대 1로 제한)
+        # 1에 가까울수록 할당된 자원을 꽉 채워 쓰고 있다는 의미 → 부하 위험 신호
+        - record: anomaly_score
+          expr: >
+            clamp_max(
+              sum(rate(container_cpu_usage_seconds_total{container!=""}[5m])) by (node, pod)
+              /
+              sum(kube_pod_container_resource_requests{resource="cpu", container!=""}) by (node, pod),
+            1)

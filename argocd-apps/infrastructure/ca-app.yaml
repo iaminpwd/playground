@@ -1,0 +1,33 @@
+# Cluster Autoscaler 배포 앱
+# AWS Auto Scaling Group을 감시하여 파드 스케줄링 실패 시 워커 노드를 자동으로 추가(scale-out)하고
+# 유휴 노드가 발생하면 자동으로 제거(scale-in)합니다.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluster-autoscaler
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    # Cluster Autoscaler 공식 Helm 차트 — 최신 버전 자동 사용
+    - repoURL: https://kubernetes.github.io/autoscaler
+      chart: cluster-autoscaler
+      targetRevision: "*"
+      helm:
+        valueFiles:
+          # ASG 태그, 노드 선택 전략, platform 노드 스케줄링 설정 등
+          - $values/infrastructure/ca/ca_values.yaml
+    # 커스텀 values 파일을 제공하는 팀 Git 레포
+    - repoURL: https://github.com/iaminpwd/argocd-test-repo.git
+      targetRevision: main
+      # targetRevision: heeseok # 테스트용 브랜치
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

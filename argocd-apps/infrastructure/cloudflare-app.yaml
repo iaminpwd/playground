@@ -1,0 +1,29 @@
+# Cloudflare Tunnel 배포 앱
+# cloudflared Deployment를 배포하여 클러스터 내부 서비스를 외부에 안전하게 노출합니다.
+# grafana.cyou.monster 등 도메인 접속 시 이 터널을 통해 내부 서비스로 라우팅됩니다.
+# sync-wave 1: 터널 토큰 Secret이 먼저 생성된 이후 배포해야 합니다.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudflare-tunnel
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/iaminpwd/argocd-test-repo.git
+    targetRevision: main
+    path: infrastructure/cloudflare
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

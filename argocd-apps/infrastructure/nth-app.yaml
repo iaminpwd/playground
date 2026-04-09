@@ -1,0 +1,35 @@
+# AWS Node Termination Handler 배포 앱
+# Spot 인스턴스 회수 이벤트를 SQS로 수신하여 노드를 gracefully drain하는 컴포넌트입니다.
+# Spot 인스턴스가 회수되기 2분 전 AWS가 이벤트를 발송하면 NTH가 감지하여 파드를 안전하게 종료합니다.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: aws-node-termination-handler
+  namespace: argocd
+  finalizers:
+    # 앱 삭제 시 K8s에 배포된 리소스도 함께 정리
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    # NTH 공식 Helm 차트 — 최신 버전 자동 사용
+    - repoURL: https://aws.github.io/eks-charts
+      chart: aws-node-termination-handler
+      targetRevision: "*"
+      helm:
+        valueFiles:
+          # 정적 설정값 (SQS 모드 활성화, drain 타임아웃, K3s 대응 옵션 등)
+          - $values/infrastructure/nth/nth_values.yaml
+          # 런타임 설정값 — Terraform이 SSM에서 읽어 주입하는 SQS URL 포함
+          - $values/infrastructure/nth/nth_runtime_values.yaml
+    # 커스텀 values 파일을 제공하는 팀 Git 레포
+    - repoURL: https://github.com/iaminpwd/argocd-test-repo.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

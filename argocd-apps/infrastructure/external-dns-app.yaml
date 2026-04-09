@@ -1,0 +1,38 @@
+# ExternalDNS 배포 앱
+# Ingress 리소스의 host 정보를 읽어 Cloudflare DNS 레코드를 자동으로 생성/수정합니다.
+# sync-wave 2: Cloudflare API 토큰 Secret(wave 1)이 먼저 생성된 이후에 배포해야 합니다.
+# 토큰이 없으면 ExternalDNS가 Cloudflare API 인증에 실패합니다.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: external-dns
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    # ExternalDNS 공식 Helm 차트
+    - repoURL: https://kubernetes-sigs.github.io/external-dns/
+      chart: external-dns
+      targetRevision: 1.19.0
+      helm:
+        valueFiles:
+          # Cloudflare 연동 설정, 도메인 필터, 토큰 주입 등
+          - $values/infrastructure/external-dns/values.yaml
+    # 커스텀 values 파일을 제공하는 팀 Git 레포
+    - repoURL: https://github.com/iaminpwd/argocd-test-repo.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

@@ -1,0 +1,1790 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neo-finops-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dashboard.json: |
+    {
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": {
+              "type": "grafana",
+              "uid": "-- Grafana --"
+            },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "description": "FinOps & SLA HUD for Kubernetes — SLA attainment, revenue correlation, cost analytics, resource waste, and service availability.",
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "links": [],
+      "preload": false,
+      "schemaVersion": 42,
+      "panels": [
+        {
+          "description": "전체 HTTP 요청 중 2xx 성공 응답 비율. sla_attainment_ratio Recording Rule 사용. 99.9% 이상 초록, 99.0% 이상 노랑, 미만 빨강.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "decimals": 3,
+              "mappings": [],
+              "max": 100,
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#E02F44",
+                    "value": null
+                  },
+                  {
+                    "color": "#EAB839",
+                    "value": 99
+                  },
+                  {
+                    "color": "#73BF69",
+                    "value": 99.9
+                  }
+                ]
+              },
+              "unit": "percent"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 0
+          },
+          "id": 1,
+          "options": {
+            "minVizHeight": 75,
+            "minVizWidth": 75,
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showThresholdLabels": true,
+            "showThresholdMarkers": true,
+            "sizing": "auto",
+            "text": {
+              "valueSize": 0
+            }
+          },
+          "pluginVersion": "13.0.0-23069273608.patch3",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sla_attainment_ratio * 100",
+              "instant": false,
+              "legendFormat": "SLA %",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "SLA ATTAINMENT",
+          "type": "gauge"
+        },
+        {
+          "description": "시간당 예상 매출. business_revenue_per_hour Recording Rule 사용. 2xx 요청 수 기반으로 계산됨.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "decimals": 2,
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#73BF69",
+                    "value": null
+                  },
+                  {
+                    "color": "#37872D",
+                    "value": 5000
+                  },
+                  {
+                    "color": "#56A64B",
+                    "value": 20000
+                  }
+                ]
+              },
+              "unit": "currencyUSD"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 12,
+            "y": 0
+          },
+          "id": 2,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "justifyMode": "center",
+            "orientation": "auto",
+            "percentChangeColorMode": "standard",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showPercentChange": false,
+            "textMode": "auto",
+            "wideLayout": false
+          },
+          "pluginVersion": "13.0.0-23069273608.patch3",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum(business_revenue_per_hour)",
+              "instant": false,
+              "legendFormat": "Revenue/hr",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "REAL-TIME REVENUE",
+          "type": "stat"
+        },
+        {
+          "description": "시간당 인프라 비용. infra_cost_per_hour Recording Rule 사용. CPU 용량 단가 + 메모리 용량 단가로 계산됨.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "decimals": 2,
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#73BF69",
+                    "value": null
+                  },
+                  {
+                    "color": "#EAB839",
+                    "value": 500
+                  },
+                  {
+                    "color": "#E02F44",
+                    "value": 1000
+                  }
+                ]
+              },
+              "unit": "currencyUSD"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 18,
+            "y": 0
+          },
+          "id": 3,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "justifyMode": "center",
+            "orientation": "auto",
+            "percentChangeColorMode": "standard",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showPercentChange": false,
+            "textMode": "auto",
+            "wideLayout": false
+          },
+          "pluginVersion": "13.0.0-23069273608.patch3",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum(infra_cost_per_hour)",
+              "instant": false,
+              "legendFormat": "Infra Cost/hr",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "TOTAL INFRA COST",
+          "type": "stat"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "description": "매출(파란선)과 인프라 비용(분홍선) 이중 Y축 상관관계 차트. 두 Recording Rule을 직접 참조함.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "fixedColor": "#00BCD4",
+                "mode": "fixed"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "series",
+                "axisLabel": "Revenue ($/hr)",
+                "axisPlacement": "left",
+                "axisSoftMax": 20000,
+                "axisSoftMin": 0,
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "opacity",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 0,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "showValues": false,
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "decimals": 2,
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "currencyUSD"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Infra Cost"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#E91E8C",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "unit",
+                    "value": "currencyUSD"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 2
+                  },
+                  {
+                    "id": "custom.axisPlacement",
+                    "value": "right"
+                  },
+                  {
+                    "id": "custom.axisLabel",
+                    "value": "Infra Cost ($/hr)"
+                  },
+                  {
+                    "id": "custom.axisColorMode",
+                    "value": "series"
+                  },
+                  {
+                    "id": "custom.axisSoftMin",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.axisSoftMax",
+                    "value": 2000
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 5
+                  },
+                  {
+                    "id": "custom.gradientMode",
+                    "value": "none"
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 2
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "smooth"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 18,
+            "x": 0,
+            "y": 8
+          },
+          "id": 4,
+          "options": {
+            "annotations": {
+              "clustering": -1,
+              "multiLane": false
+            },
+            "legend": {
+              "calcs": [
+                "mean",
+                "max",
+                "lastNotNull"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "13.0.0-23069273608.patch3",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum(business_revenue_per_hour)",
+              "instant": false,
+              "legendFormat": "Revenue",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum(infra_cost_per_hour)",
+              "instant": false,
+              "legendFormat": "Infra Cost",
+              "range": true,
+              "refId": "B"
+            }
+          ],
+          "title": "BIZOPS - BUSINESS & FINOPS CORRELATION",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "description": "거래 1건당 인프라 비용. cost_per_transaction Recording Rule 사용. infra_cost_per_hour를 2xx 처리량으로 나눈 값.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "decimals": 4,
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#4CAF50",
+                    "value": null
+                  },
+                  {
+                    "color": "#FFC107",
+                    "value": 1
+                  },
+                  {
+                    "color": "#F44336",
+                    "value": 2
+                  }
+                ]
+              },
+              "unit": "currencyUSD"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 3,
+            "x": 18,
+            "y": 8
+          },
+          "id": 5,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "auto",
+            "percentChangeColorMode": "standard",
+            "reduceOptions": {
+              "calcs": [
+                "last"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showPercentChange": false,
+            "text": {
+              "valueSize": 0
+            },
+            "textMode": "value_and_name",
+            "wideLayout": false
+          },
+          "pluginVersion": "13.0.0-23069273608.patch3",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum(cost_per_transaction)",
+              "instant": false,
+              "legendFormat": "/Order",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "COST PER TRANSACTION",
+          "type": "stat"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "description": "Spot 인스턴스 비율. spot_adoption_rate Recording Rule 사용. 노드명에 spot 포함 여부로 판단.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "decimals": 1,
+              "mappings": [],
+              "max": 100,
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#F44336",
+                    "value": null
+                  },
+                  {
+                    "color": "#FFC107",
+                    "value": 40
+                  },
+                  {
+                    "color": "#4CAF50",
+                    "value": 70
+                  }
+                ]
+              },
+              "unit": "percent"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 3,
+            "x": 21,
+            "y": 8
+          },
+          "id": 6,
+          "options": {
+            "minVizHeight": 75,
+            "minVizWidth": 75,
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "last"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showThresholdLabels": true,
+            "showThresholdMarkers": true,
+            "sizing": "auto",
+            "text": {
+              "valueSize": 0
+            }
+          },
+          "pluginVersion": "13.0.0-23069273608.patch3",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum(spot_adoption_rate)",
+              "instant": false,
+              "legendFormat": "Spot Adoption %",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "SPOT INSTANCE ADOPTION RATE",
+          "type": "gauge"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "description": "네임스페이스별 실제 HTTP 요청 수(파란 점)와 2시간 예측선(회색 점선). 서브쿼리 30분, 예측 범위 2시간으로 경량화.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "Requests",
+                "axisPlacement": "auto",
+                "axisSoftMax": 350,
+                "axisSoftMin": 0,
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 4,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "showValues": false,
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "area"
+                }
+              },
+              "mappings": [],
+              "max": 350,
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "transparent",
+                    "value": null
+                  },
+                  {
+                    "color": "#CE93D8",
+                    "value": 200
+                  },
+                  {
+                    "color": "#9C27B0",
+                    "value": 280
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byRegexp",
+                  "options": "^Actual.*"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#1565C0",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "points"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 4
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "always"
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Predicted"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#9E9E9E",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 2
+                  },
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "dash": [
+                        5,
+                        5
+                      ],
+                      "fill": "dash"
+                    }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 18,
+            "x": 0,
+            "y": 16
+          },
+          "id": 7,
+          "options": {
+            "annotations": {
+              "clustering": -1,
+              "multiLane": false
+            },
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "13.0.0-23069273608.patch3",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum(increase(http_server_duration_seconds_count{namespace=~\"$namespace\"}[$__rate_interval])) by (namespace)",
+              "instant": false,
+              "legendFormat": "Actual — {{namespace}}",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "predict_linear(sum(rate(http_server_duration_seconds_count{namespace=~\"$namespace\"}[$__rate_interval]))[30m:5m], 7200)",
+              "instant": false,
+              "legendFormat": "Predicted",
+              "range": true,
+              "refId": "B"
+            }
+          ],
+          "title": "24-HOUR TRAFFIC FORECAST",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "description": "파드별 CPU사용률 / CPU Request 비율. anomaly_score Recording Rule 사용. 1에 가까울수록 Request 한계에 도달한 이상 상태.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "decimals": 2,
+              "mappings": [],
+              "max": 1,
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#4CAF50",
+                    "value": null
+                  },
+                  {
+                    "color": "#FFC107",
+                    "value": 0.5
+                  },
+                  {
+                    "color": "#F44336",
+                    "value": 0.8
+                  }
+                ]
+              },
+              "unit": "percentunit"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 3,
+            "x": 18,
+            "y": 16
+          },
+          "id": 8,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "justifyMode": "center",
+            "orientation": "auto",
+            "percentChangeColorMode": "standard",
+            "reduceOptions": {
+              "calcs": [
+                "max"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showPercentChange": false,
+            "textMode": "auto",
+            "wideLayout": false
+          },
+          "pluginVersion": "13.0.0-23069273608.patch3",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "max(anomaly_score)",
+              "instant": false,
+              "legendFormat": "Max Anomaly",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "CLUSTER ANOMALY SCORE",
+          "type": "stat"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "description": "현재 CPU 사용 추세 기준으로 allocatable CPU가 고갈될 때까지 남은 시간 예측. predict_linear를 30분 슬라이딩 윈도우로 계산. 값이 작을수록 빠른 증설이 필요함.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "decimals": 0,
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#4CAF50",
+                    "value": null
+                  },
+                  {
+                    "color": "#FFC107",
+                    "value": 60
+                  },
+                  {
+                    "color": "#FF6D00",
+                    "value": 120
+                  },
+                  {
+                    "color": "#F44336",
+                    "value": 180
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 3,
+            "x": 21,
+            "y": 16
+          },
+          "id": 9,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "auto",
+            "percentChangeColorMode": "standard",
+            "reduceOptions": {
+              "calcs": [
+                "last"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showPercentChange": false,
+            "text": {
+              "valueSize": 0
+            },
+            "textMode": "auto",
+            "wideLayout": false
+          },
+          "pluginVersion": "13.0.0-23069273608.patch3",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "min(predict_linear(kube_node_status_allocatable{resource=\"cpu\"}[30m], 3600))",
+              "instant": false,
+              "legendFormat": "Time to Scale",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "PREDICTED TIME-TO-SCALE",
+          "type": "stat"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "description": "CPU 소비 상위 5개 파드. CPU Usage % 단일 지표로 경량화.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "filterable": false,
+                "footer": {
+                  "reducers": []
+                },
+                "inspect": false
+              },
+              "decimals": 1,
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#4CAF50",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "percent"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Pod"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "string"
+                  },
+                  {
+                    "id": "custom.align",
+                    "value": "left"
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-text"
+                    }
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#2196F3",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "CPU Usage %"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "percent"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 1
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 100
+                  },
+                  {
+                    "id": "custom.align",
+                    "value": "center"
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "thresholds"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "#4CAF50",
+                          "value": null
+                        },
+                        {
+                          "color": "#FFC107",
+                          "value": 20
+                        },
+                        {
+                          "color": "#FF9800",
+                          "value": 30
+                        },
+                        {
+                          "color": "#F44336",
+                          "value": 40
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 24
+          },
+          "id": 10,
+          "options": {
+            "cellHeight": "sm",
+            "enablePagination": false,
+            "footer": {
+              "countRows": false,
+              "fields": "",
+              "reducer": [
+                "sum"
+              ],
+              "show": false
+            },
+            "showHeader": true,
+            "sortBy": [
+              {
+                "desc": true,
+                "displayName": "CPU Usage %"
+              }
+            ]
+          },
+          "pluginVersion": "13.0.0-23069273608.patch3",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "topk(5, sum(rate(container_cpu_usage_seconds_total{namespace=~\"$namespace\", container!=\"\"}[$__rate_interval])) by (pod))",
+              "instant": true,
+              "legendFormat": "",
+              "range": false,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=~\"$namespace\", container!=\"\"}[$__rate_interval])) by (pod) / scalar(sum(rate(container_cpu_usage_seconds_total{namespace=~\"$namespace\", container!=\"\"}[$__rate_interval]))) * 100",
+              "instant": true,
+              "legendFormat": "",
+              "range": false,
+              "refId": "B"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "merge",
+              "options": {}
+            },
+            {
+              "id": "filterByValue",
+              "options": {
+                "filters": [
+                  {
+                    "config": {
+                      "id": "isNotNull",
+                      "options": {}
+                    },
+                    "fieldName": "Value #A"
+                  }
+                ],
+                "match": "all",
+                "type": "include"
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "Value #A": true
+                },
+                "indexByName": {
+                  "pod": 0,
+                  "Value #B": 1
+                },
+                "renameByName": {
+                  "pod": "Pod",
+                  "Value #B": "CPU Usage %"
+                }
+              }
+            },
+            {
+              "id": "sortBy",
+              "options": {
+                "fields": {},
+                "sort": [
+                  {
+                    "desc": true,
+                    "displayName": "CPU Usage %"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "limit",
+              "options": {
+                "limitField": 5
+              }
+            }
+          ],
+          "title": "TOP 5 RESOURCE WASTERS",
+          "type": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "description": "online-boutique 6개 서비스 파드 Ready 상태 타임라인. kube_pod_status_ready 기반. 초록=Up, 노랑=Degraded, 빨강=Down.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "custom": {
+                "axisPlacement": "auto",
+                "fillOpacity": 80,
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineWidth": 0,
+                "spanNulls": false
+              },
+              "mappings": [
+                {
+                  "options": {
+                    "0": {
+                      "color": "#F44336",
+                      "index": 0,
+                      "text": "Down"
+                    },
+                    "1": {
+                      "color": "#4CAF50",
+                      "index": 2,
+                      "text": "Up"
+                    },
+                    "0.5": {
+                      "color": "#FFC107",
+                      "index": 1,
+                      "text": "Degraded"
+                    }
+                  },
+                  "type": "value"
+                },
+                {
+                  "options": {
+                    "from": 0.1,
+                    "result": {
+                      "color": "#FFC107",
+                      "index": 2,
+                      "text": "Degraded"
+                    },
+                    "to": 0.9
+                  },
+                  "type": "range"
+                },
+                {
+                  "options": {
+                    "from": 0.9,
+                    "result": {
+                      "color": "#4CAF50",
+                      "index": 3,
+                      "text": "Up"
+                    },
+                    "to": 1
+                  },
+                  "type": "range"
+                }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#F44336",
+                    "value": null
+                  },
+                  {
+                    "color": "#FFC107",
+                    "value": 0.5
+                  },
+                  {
+                    "color": "#4CAF50",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 24
+          },
+          "id": 11,
+          "options": {
+            "alignValue": "left",
+            "annotations": {
+              "clustering": -1,
+              "multiLane": false
+            },
+            "legend": {
+              "displayMode": "list",
+              "placement": "top",
+              "showLegend": true
+            },
+            "mergeValues": true,
+            "rowHeight": 0.7,
+            "showValue": "never",
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "13.0.0-23069273608.patch3",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "max(kube_pod_status_ready{namespace=\"online-boutique\", condition=\"true\", pod=~\"frontend.*\"}) OR vector(0)",
+              "instant": false,
+              "legendFormat": "frontend",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "max(kube_pod_status_ready{namespace=\"online-boutique\", condition=\"true\", pod=~\"cartservice.*\"}) OR vector(0)",
+              "instant": false,
+              "legendFormat": "cartservice",
+              "range": true,
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "max(kube_pod_status_ready{namespace=\"online-boutique\", condition=\"true\", pod=~\"paymentservice.*\"}) OR vector(0)",
+              "instant": false,
+              "legendFormat": "paymentservice",
+              "range": true,
+              "refId": "C"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "max(kube_pod_status_ready{namespace=\"online-boutique\", condition=\"true\", pod=~\"shippingservice.*\"}) OR vector(0)",
+              "instant": false,
+              "legendFormat": "shippingservice",
+              "range": true,
+              "refId": "D"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "max(kube_pod_status_ready{namespace=\"online-boutique\", condition=\"true\", pod=~\"currencyservice.*\"}) OR vector(0)",
+              "instant": false,
+              "legendFormat": "currencyservice",
+              "range": true,
+              "refId": "E"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "max(kube_pod_status_ready{namespace=\"online-boutique\", condition=\"true\", pod=~\"adservice.*\"}) OR vector(0)",
+              "instant": false,
+              "legendFormat": "adservice",
+              "range": true,
+              "refId": "F"
+            }
+          ],
+          "title": "SERVICE AVAILABILITY GRID",
+          "type": "state-timeline"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "description": "online-boutique 파드별 CPU 사용량 기반 비용 비율 파이 차트. container_cpu_usage_seconds_total로 실제 사용량을 집계하여 상대 비율로 표시.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                }
+              },
+              "mappings": [],
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 32
+          },
+          "id": 12,
+          "options": {
+            "displayLabels": [
+              "percent"
+            ],
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "values": [
+                "percent",
+                "value"
+              ]
+            },
+            "pieType": "pie",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "sort": "desc",
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "single",
+              "sort": "desc"
+            }
+          },
+          "pluginVersion": "13.0.0-23069273608.patch3",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"online-boutique\", container!=\"\", container!=\"POD\"}[$__rate_interval])) by (pod)",
+              "instant": false,
+              "legendFormat": "{{pod}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "MICROSERVICE COST BREAKDOWN",
+          "type": "piechart"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "description": "OOMKilled로 종료된 파드 수 시계열. 0이면 정상(초록), 1 이상이면 메모리 압박 이벤트(빨강).",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "bars",
+                "fillOpacity": 85,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 0,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "showValues": false,
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "area"
+                }
+              },
+              "mappings": [
+                {
+                  "options": {
+                    "0": {
+                      "color": "#4CAF50",
+                      "index": 0,
+                      "text": "OK"
+                    }
+                  },
+                  "type": "value"
+                }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#4CAF50",
+                    "value": null
+                  },
+                  {
+                    "color": "#F44336",
+                    "value": 1
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 12,
+            "y": 32
+          },
+          "id": 13,
+          "options": {
+            "annotations": {
+              "clustering": -1,
+              "multiLane": false
+            },
+            "legend": {
+              "calcs": [
+                "max",
+                "sum"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "pluginVersion": "13.0.0-23069273608.patch3",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum(kube_pod_container_status_last_terminated_reason{reason=\"OOMKilled\", namespace=~\"$namespace\"}) by (pod, namespace)",
+              "instant": false,
+              "legendFormat": "{{namespace}}/{{pod}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "OOMKILLED PODS",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "description": "네임스페이스 단위 네트워크 수신(파란색)과 송신(주황색) bytes/sec. 파드별 분리 대신 namespace 합산으로 경량화.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "opacity",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "showValues": false,
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "Bps"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byRegexp",
+                  "options": "^Inbound.*"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#2196F3",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byRegexp",
+                  "options": "^Outbound.*"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#FF9800",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 18,
+            "y": 32
+          },
+          "id": 14,
+          "options": {
+            "annotations": {
+              "clustering": -1,
+              "multiLane": false
+            },
+            "legend": {
+              "calcs": [
+                "mean",
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "13.0.0-23069273608.patch3",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum(rate(container_network_receive_bytes_total{namespace=~\"$namespace\"}[5m])) by (namespace)",
+              "instant": false,
+              "legendFormat": "Inbound — {{namespace}}",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum(rate(container_network_transmit_bytes_total{namespace=~\"$namespace\"}[5m])) by (namespace)",
+              "instant": false,
+              "legendFormat": "Outbound — {{namespace}}",
+              "range": true,
+              "refId": "B"
+            }
+          ],
+          "title": "NETWORK I/O",
+          "type": "timeseries"
+        }
+      ],
+      "refresh": "30s",
+      "tags": [
+        "finops",
+        "k3s",
+        "online-boutique"
+      ],
+      "templating": {
+        "list": [
+          {
+            "allowCustomValue": true,
+            "current": {
+              "text": "Prometheus",
+              "value": "prometheus"
+            },
+            "hide": 0,
+            "includeAll": false,
+            "label": "Data Source",
+            "multi": false,
+            "name": "datasource",
+            "options": [],
+            "query": "prometheus",
+            "refresh": 1,
+            "regex": "",
+            "type": "datasource"
+          },
+          {
+            "allowCustomValue": true,
+            "current": {
+              "text": "online-boutique",
+              "value": "online-boutique"
+            },
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "definition": "label_values(kube_pod_info, namespace)",
+            "hide": 0,
+            "includeAll": true,
+            "label": "NAMESPACE",
+            "multi": true,
+            "name": "namespace",
+            "options": [],
+            "query": {
+              "label": "namespace",
+              "metric": "kube_pod_info",
+              "qryType": 1,
+              "query": "label_values(kube_pod_info, namespace)",
+              "refId": "PrometheusVariableQueryEditor-VariableQuery"
+            },
+            "refresh": 2,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 1,
+            "type": "query"
+          }
+        ]
+      },
+      "time": {
+        "from": "now-30m",
+        "to": "now"
+      },
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "NEO-FINOPS :: K3S CLUSTER HUD",
+      "uid": "chw8xxm",
+      "version": 3,
+      "weekStart": ""
+    }

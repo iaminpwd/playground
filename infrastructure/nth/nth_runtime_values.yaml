@@ -1,0 +1,2 @@
+# This file is updated by the Terraform apply -> Argo CD bootstrap workflow.
+queueURL: "https://sqs.ap-northeast-2.amazonaws.com/719030485166/my-k3s-spot-interruption"

@@ -1,0 +1,33 @@
+# AWS Load Balancer Controller 배포 앱
+# K8s Ingress 리소스를 감지하여 AWS ALB를 자동으로 생성/관리합니다.
+# K3s 환경에서 IRSA 대신 노드 IAM Instance Profile 권한을 사용합니다.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: aws-load-balancer-controller
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    # AWS Load Balancer Controller 공식 Helm 차트 — 최신 버전 자동 사용
+    - repoURL: https://aws.github.io/eks-charts
+      chart: aws-load-balancer-controller
+      targetRevision: "*"
+      helm:
+        valueFiles:
+          # 클러스터명, 리전, instance 타입 타겟 설정 등
+          - $values/infrastructure/aws-load-balancer-controller/values.yaml
+    # 커스텀 values 파일을 제공하는 팀 Git 레포
+    - repoURL: https://github.com/iaminpwd/argocd-test-repo.git
+      targetRevision: main
+      # targetRevision: heeseok # 테스트용 브랜치
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

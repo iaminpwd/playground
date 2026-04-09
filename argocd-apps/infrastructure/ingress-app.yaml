@@ -1,0 +1,25 @@
+# ALB IngressClass 및 공유 Ingress 템플릿 배포 앱
+# infrastructure/ingress-controllers 경로의 IngressClass와 Ingress 리소스를 배포합니다.
+# 여러 서비스가 하나의 ALB를 공유하도록 IngressGroup 기반으로 구성합니다.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ingress
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/iaminpwd/argocd-test-repo.git
+    targetRevision: main
+    # targetRevision: heeseok # 테스트용 브랜치
+    path: infrastructure/ingress-controllers
+  destination:
+    server: https://kubernetes.default.svc
+    # Ingress 리소스는 default 네임스페이스에 배포
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
