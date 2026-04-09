@@ -1,13 +1,3 @@
-data "terraform_remote_state" "network" {
-  backend = "local"
-  config = { path = "../01-network/terraform.tfstate" }
-}
-
-data "terraform_remote_state" "security" {
-  backend = "local"
-  config = { path = "../02-security/terraform.tfstate" }
-}
-
 data "aws_ami" "ubuntu_x86" {
   most_recent = true
   owners      = ["099720109477"]

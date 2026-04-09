@@ -3,8 +3,20 @@ include "root" {
   path = find_in_parent_folders()
 }
 
-dependency "network" { config_path = "../01-network" }
-dependency "security" { config_path = "../02-security" }
+dependency "network" { 
+  config_path = "../01-network" 
+  mock_outputs = {
+    public_subnet_id  = "subnet-mock-public"
+    private_subnet_id = "subnet-mock-private"
+  }
+}
+dependency "security" { 
+  config_path = "../02-security" 
+  mock_outputs = {
+    jump_sg_id = "sg-mock-jump"
+    k3s_sg_id  = "sg-mock-k3s"
+  }
+}
 
 inputs = {
   public_subnet_id  = dependency.network.outputs.public_subnet_id
