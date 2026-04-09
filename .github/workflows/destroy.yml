@@ -28,9 +28,6 @@ jobs:
           CLEANUP_MODE=prepare ./scripts/cleanup.sh
 
       - name: Terragrunt Destroy
-        run: make destroy ARGS="--non-interactive"
-
-      - name: Terragrunt Apply via Makefile
         env:
           TF_VAR_github_token: ${{ secrets.ARGOCD_GITHUB_TOKEN }}
-        run: make apply ARGS="--non-interactive"
+        run: make destroy ARGS="--non-interactive"
