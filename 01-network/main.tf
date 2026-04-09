@@ -1,3 +1,5 @@
+# FILE: ./01-network/main.tf
+
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
@@ -25,10 +27,20 @@ resource "aws_internet_gateway" "igw" {
   tags = { Name = "k3s-igw" }
 }
 
-resource "aws_eip" "nat" { domain = "vpc" }
+# ==========================================
+# 💡 여기서부터 NAT 스위치(var.enable_nat)가 적용된 부분입니다!
+# ==========================================
+
+resource "aws_eip" "nat" {
+  count  = var.enable_nat ? 1 : 0
+  domain = "vpc"
+}
 
 resource "aws_nat_gateway" "nat" {
-  allocation_id = aws_eip.nat.id
+  count         = var.enable_nat ? 1 : 0
+  
+  # count가 적용된 리소스는 [0] 인덱스로 접근해야 합니다.
+  allocation_id = aws_eip.nat[0].id
   subnet_id     = aws_subnet.public.id
   tags = { Name = "k3s-nat" }
 }
@@ -46,12 +58,18 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
+# 기존에 있던 route { ... } 블록을 제거하여 빈 껍데기로 만듭니다.
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.nat.id
-  }
+}
+
+# NAT Gateway가 생성될 때만(enable_nat = true), Private 라우팅 규칙을 추가합니다.
+resource "aws_route" "private_nat_route" {
+  count                  = var.enable_nat ? 1 : 0
+  
+  route_table_id         = aws_route_table.private.id
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = aws_nat_gateway.nat[0].id
 }
 
 resource "aws_route_table_association" "private" {
