@@ -82,5 +82,5 @@ remote_state {
 inputs = {
   cluster_name = "my-k3s"
   key_name     = "keypair"
-  git_repo_url = "https://github.com/kt-cloud-finops-team5/finops-gitops-config.git"
+  git_repo_url = "https://github.com/iaminpwd/argocd-test-repo.git"
 }
