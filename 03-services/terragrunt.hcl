@@ -1,4 +1,12 @@
 # 03-services/terragrunt.hcl
+
+terraform {
+  # "..//03-services"의 의미:
+  # 1. ".." : 상위 폴더(루트)로 가서 전체를 다 복사해라.
+  # 2. "//03-services" : 그중에서 실행은 03-services 폴더 안에서 해라.
+  source = "..//03-services"
+}
+
 include "root" {
   path = find_in_parent_folders()
 }
