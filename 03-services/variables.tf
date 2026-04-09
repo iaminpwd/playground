@@ -28,3 +28,8 @@ variable "git_repo_url" {
   description = "https://github.com/iaminpwd/argocd-test-repo.git"
   type        = string
 }
+variable "github_token" {
+  description = "ArgoCD가 깃허브 Private Repo에 접근하기 위한 토큰"
+  type        = string
+  sensitive   = true # 로그에 토큰이 노출되지 않게 가려주는 보안 설정!
+}

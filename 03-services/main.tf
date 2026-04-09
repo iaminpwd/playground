@@ -20,6 +20,7 @@ module "k3s_cluster" {
   
   # ✅ 여기에 깃허브 주소가 들어가야 마스터 노드가 ArgoCD를 세팅할 수 있습니다!
   git_repo_url         = var.git_repo_url 
+  github_token         = var.github_token
 }
 
 # 3. ★ 신규 추가: K3s 워커 노드 ASG 모듈 호출 ★

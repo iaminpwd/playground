@@ -33,3 +33,8 @@ jobs:
       # ★ 변경된 부분: 직접 명령어를 치지 않고 Makefile을 호출합니다.
       - name: Terragrunt Apply via Makefile
         run: make apply ARGS="--non-interactive"
+
+      - name: Terragrunt Apply via Makefile
+        env:
+          TF_VAR_github_token: ${{ secrets.ARGOCD_GITHUB_TOKEN }}
+        run: make apply ARGS="--non-interactive"

@@ -4,3 +4,8 @@ variable "subnet_id" { type = string }
 variable "key_name" { type = string }
 variable "cluster_name" { type = string }
 variable "git_repo_url" { type = string }
+
+variable "github_token" { 
+  type      = string 
+  sensitive = true
+}
