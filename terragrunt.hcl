@@ -11,6 +11,25 @@ provider "aws" {
 EOF
 }
 
+generate "versions" {
+  path      = "versions.tf"
+  if_exists = "overwrite_terragrunt"
+  contents  = <<EOF
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
+  }
+}
+EOF
+}
+
 # 2. ★ 새로 추가하는 Remote State (S3 & DynamoDB) 설정 ★
 remote_state {
   backend = "s3"
