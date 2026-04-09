@@ -1,0 +1,25 @@
+name: 'Terragrunt Destroy'
+
+on:
+  workflow_dispatch: # 이 옵션이 있으면 깃허브 웹에서 '버튼'이 생깁니다.
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-2
+      - uses: hashicorp/setup-terraform@v3
+      - uses: autero1/action-terragrunt@v3
+        with:
+          terragrunt-version: latest
+      - name: Terragrunt Destroy
+        run: make destroy ARGS="--non-interactive"
