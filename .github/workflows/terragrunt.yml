@@ -22,17 +22,10 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ap-northeast-2
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
       - name: Setup Terragrunt
         uses: autero1/action-terragrunt@v3
         with:
           terragrunt-version: latest
-
-      # ★ 변경된 부분: 직접 명령어를 치지 않고 Makefile을 호출합니다.
-      - name: Terragrunt Apply via Makefile
-        run: make apply ARGS="--non-interactive"
 
       - name: Terragrunt Apply via Makefile
         env:
