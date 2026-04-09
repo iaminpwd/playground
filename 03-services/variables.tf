@@ -23,3 +23,8 @@ variable "worker_instance_type" {
 variable "cluster_name" { 
   type    = string
 }
+
+variable "git_repo_url" {
+  description = "https://github.com/iaminpwd/argocd-test-repo.git"
+  type        = string
+}

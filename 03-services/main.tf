@@ -40,3 +40,4 @@ module "k3s_spot_handler" {
   source       = "../modules/k3s-spot-handler"
   cluster_name = var.cluster_name
 }
+
