@@ -17,6 +17,9 @@ module "k3s_cluster" {
   sg_id                = var.k3s_sg_id
   subnet_id            = var.private_subnet_id
   key_name             = var.key_name
+  
+  # ✅ 여기에 깃허브 주소가 들어가야 마스터 노드가 ArgoCD를 세팅할 수 있습니다!
+  git_repo_url         = var.git_repo_url 
 }
 
 # 3. ★ 신규 추가: K3s 워커 노드 ASG 모듈 호출 ★
@@ -28,7 +31,7 @@ module "k3s_worker_asg" {
   sg_id                 = var.k3s_sg_id
   subnet_id             = var.private_subnet_id
   key_name              = var.key_name
-  git_repo_url         = var.git_repo_url
+  # ❌ 여기에 있던 git_repo_url = var.git_repo_url 은 지웠습니다!
   
   # 마스터 노드에서 생성된 데이터 넘겨주기
   instance_profile_name = module.k3s_cluster.instance_profile_name
