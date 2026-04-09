@@ -28,6 +28,7 @@ module "k3s_worker_asg" {
   sg_id                 = var.k3s_sg_id
   subnet_id             = var.private_subnet_id
   key_name              = var.key_name
+  git_repo_url         = var.git_repo_url
   
   # 마스터 노드에서 생성된 데이터 넘겨주기
   instance_profile_name = module.k3s_cluster.instance_profile_name
