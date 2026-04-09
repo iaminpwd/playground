@@ -22,14 +22,18 @@ resource "aws_instance" "master" {
   key_name               = var.key_name
   iam_instance_profile   = aws_iam_instance_profile.k3s_node_profile.name
   
-  user_data = <<-EOF
+user_data = <<-EOF
     #!/bin/bash
     
-    # 1. K3s 마스터 설치 (일반 유저도 kubectl 사용 가능하게 644 권한 설정 추가!)
+    # 1. K3s 설치
     curl -sfL https://get.k3s.io | K3S_TOKEN="${random_password.k3s_token.result}" sh -s - server --cluster-init --write-kubeconfig-mode 644
     echo 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml' >> /home/ubuntu/.bashrc
-    
-    # 2. ArgoCD 설치 (HelmChart CRD 활용)
+
+    # 2. 매니페스트 폴더 생성 및 대기 (가장 안전한 방식)
+    mkdir -p /var/lib/rancher/k3s/server/manifests/
+    sleep 10
+
+    # 3. ArgoCD 헬름 차트 매니페스트 (변수가 없으므로 작은따옴표 유지)
     cat << 'MANIFEST' > /var/lib/rancher/k3s/server/manifests/argocd.yaml
     apiVersion: helm.cattle.io/v1
     kind: HelmChart
@@ -46,8 +50,8 @@ resource "aws_instance" "master" {
         server.extraArgs[0]: --insecure
     MANIFEST
 
-    # 3. ★ 루트 앱(App of Apps) 자동 등록 YAML 추가 ★
-    cat << 'APP_MANIFEST' > /var/lib/rancher/k3s/server/manifests/platform-root.yaml
+    # 4. 루트 앱 매니페스트 (★ 테라폼 변수가 있으므로 작은따옴표 제거!)
+    cat << APP_MANIFEST > /var/lib/rancher/k3s/server/manifests/platform-root.yaml
     apiVersion: argoproj.io/v1alpha1
     kind: Application
     metadata:
