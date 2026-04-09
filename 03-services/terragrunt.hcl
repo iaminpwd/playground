@@ -33,6 +33,8 @@ inputs = {
   k3s_sg_id         = dependency.security.outputs.k3s_sg_id
   key_name          = "keypair"
 
+  cluster_name      = "my-k3s"
+
   jump_instance_type   = "t3.micro"
   master_instance_type = "t4g.small" # 마스터만 사양을 올려볼까요?
   worker_instance_type = "t4g.micro"

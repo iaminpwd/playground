@@ -12,14 +12,22 @@ resource "aws_subnet" "public" {
   cidr_block              = "10.0.1.0/24"
   map_public_ip_on_launch = true
   availability_zone       = "ap-northeast-2a"
-  tags = { Name = "k3s-public-subnet" }
+  tags = { 
+    Name                                        = "k3s-public-subnet" 
+    "kubernetes.io/cluster/${var.cluster_name}" = "owned"
+    "kubernetes.io/role/elb"                    = "1"
+  }
 }
 
 resource "aws_subnet" "private" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.2.0/24"
   availability_zone = "ap-northeast-2a"
-  tags = { Name = "k3s-private-subnet" }
+  tags = { 
+    Name                                        = "k3s-private-subnet" 
+    "kubernetes.io/cluster/${var.cluster_name}" = "owned"
+    "kubernetes.io/role/internal-elb"           = "1"
+  }
 }
 
 resource "aws_internet_gateway" "igw" {

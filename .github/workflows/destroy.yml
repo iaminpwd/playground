@@ -21,5 +21,11 @@ jobs:
       - uses: autero1/action-terragrunt@v3
         with:
           terragrunt-version: latest
+
+      - name: Pre-destroy GitOps Cleanup
+        run: |
+          chmod +x ./scripts/cleanup.sh
+          CLEANUP_MODE=prepare ./scripts/cleanup.sh
+              
       - name: Terragrunt Destroy
         run: make destroy ARGS="--non-interactive"
