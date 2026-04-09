@@ -1,0 +1,499 @@
+
+# FILE: ./.github/workflows/terragrunt.yml
+name: 'Terragrunt Apply (OIDC)'
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Setup Terragrunt
+        uses: autero1/action-terragrunt@v3
+        with:
+          terragrunt-version: latest
+
+      # ★ 변경된 부분: 직접 명령어를 치지 않고 Makefile을 호출합니다.
+      - name: Terragrunt Apply via Makefile
+        run: make apply ARGS="--non-interactive"
+# FILE: ./.github/workflows/destroy.yml
+name: 'Terragrunt Destroy (OIDC)'
+
+on:
+  workflow_dispatch: # 이 옵션이 있으면 깃허브 웹에서 '버튼'이 생깁니다.
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-2
+      - uses: hashicorp/setup-terraform@v3
+      - uses: autero1/action-terragrunt@v3
+        with:
+          terragrunt-version: latest
+      - name: Terragrunt Destroy
+        run: make destroy ARGS="--non-interactive"
+# FILE: ./Makefile
+.PHONY: plan apply destroy
+
+# 명령어를 칠 때 추가 옵션을 받을 수 있도록 비워둔 변수
+ARGS ?=
+
+plan:
+	terragrunt run --all plan $(ARGS)
+
+apply:
+	terragrunt run --all apply $(ARGS)
+
+destroy:
+	terragrunt run --all destroy $(ARGS)
+# FILE: ./03-services/variables.tf
+variable "key_name" { type = string }
+variable "public_subnet_id" { type = string }
+variable "private_subnet_id" { type = string }
+variable "jump_sg_id" { type = string }
+variable "k3s_sg_id" { type = string }
+
+
+variable "jump_instance_type" {
+  description = "점프 서버의 인스턴스 타입"
+  type        = string
+  default     = "t3.micro" # 값을 안 넣어주면 기본으로 쓸 사양
+}
+
+variable "master_instance_type" {
+  description = "K3s 마스터 노드의 인스턴스 타입"
+  type        = string
+  default     = "t4g.micro"
+}
+
+variable "worker_instance_type" {
+  description = "K3s 워커 노드의 인스턴스 타입"
+  type        = string
+  default     = "t4g.micro"
+}
+# FILE: ./03-services/main.tf
+# 1. 점프 서버 부품 호출
+module "jump_server" {
+  source = "../modules/jump-server" # 부품 공장 주소
+
+  # 부품(module)이 요구하는 변수에 03-services가 받은 변수를 넘겨줍니다.
+  instance_type = var.jump_instance_type
+  sg_id         = var.jump_sg_id
+  subnet_id     = var.public_subnet_id
+  key_name      = var.key_name
+}
+
+# 2. K3s 클러스터 부품 호출
+module "k3s_cluster" {
+  source = "../modules/k3s-cluster"
+
+  master_instance_type = var.master_instance_type
+  worker_instance_type = var.worker_instance_type
+  sg_id                = var.k3s_sg_id
+  subnet_id            = var.private_subnet_id
+  key_name             = var.key_name
+}
+# FILE: ./03-services/terragrunt.hcl
+# 03-services/terragrunt.hcl
+
+terraform {
+  # "..//03-services"의 의미:
+  # 1. ".." : 상위 폴더(루트)로 가서 전체를 다 복사해라.
+  # 2. "//03-services" : 그중에서 실행은 03-services 폴더 안에서 해라.
+  source = "..//03-services"
+}
+
+include "root" {
+  path = find_in_parent_folders()
+}
+
+dependency "network" { 
+  config_path = "../01-network" 
+  mock_outputs = {
+    public_subnet_id  = "subnet-mock-public"
+    private_subnet_id = "subnet-mock-private"
+  }
+}
+dependency "security" { 
+  config_path = "../02-security" 
+  mock_outputs = {
+    jump_sg_id = "sg-mock-jump"
+    k3s_sg_id  = "sg-mock-k3s"
+  }
+}
+
+inputs = {
+  public_subnet_id  = dependency.network.outputs.public_subnet_id
+  private_subnet_id = dependency.network.outputs.private_subnet_id
+  jump_sg_id        = dependency.security.outputs.jump_sg_id
+  k3s_sg_id         = dependency.security.outputs.k3s_sg_id
+  key_name          = "keypair"
+
+  jump_instance_type   = "t3.micro"
+  master_instance_type = "t4g.small" # 마스터만 사양을 올려볼까요?
+  worker_instance_type = "t4g.micro"
+}
+# FILE: ./03-services/outputs.tf
+output "jump_server_public_ip" {
+  value = module.jump_server.public_ip
+}
+
+output "k3s_master_private_ip" {
+  value = module.k3s_cluster.master_private_ip
+}
+# FILE: ./terragrunt.hcl
+# 루트 terragrunt.hcl
+
+# 1. 기존에 있던 Provider 자동 생성 코드
+generate "provider" {
+  path      = "provider.tf"
+  if_exists = "overwrite_terragrunt"
+  contents  = <<EOF
+provider "aws" {
+  region = "ap-northeast-2"
+}
+EOF
+}
+
+generate "versions" {
+  path      = "versions.tf"
+  if_exists = "overwrite_terragrunt"
+  contents  = <<EOF
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
+  }
+}
+EOF
+}
+
+# 2. ★ 새로 추가하는 Remote State (S3 & DynamoDB) 설정 ★
+remote_state {
+  backend = "s3"
+  generate = {
+    path      = "backend.tf"
+    if_exists = "overwrite_terragrunt"
+  }
+  config = {
+    # 주의: S3 버킷 이름은 전 세계에서 유일해야 합니다. 본인만의 이름으로 바꿔주세요!
+    bucket         = "terraform-practice-state-732245" 
+    key            = "${path_relative_to_include()}/terraform.tfstate"
+    region         = "ap-northeast-2"
+    encrypt        = true
+    dynamodb_table = "terraform-lock-table"
+  }
+}
+# FILE: ./01-network/variables.tf
+# FILE: ./01-network/variables.tf
+
+variable "enable_nat" {
+  description = "NAT Gateway 생성 여부 (비용 절감 스위치)"
+  type        = bool
+  default     = false # 기본값은 꺼둠(돈 안 나감)
+}
+# FILE: ./01-network/main.tf
+# FILE: ./01-network/main.tf
+
+resource "aws_vpc" "main" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+  tags = { Name = "k3s-vpc" }
+}
+
+resource "aws_subnet" "public" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.1.0/24"
+  map_public_ip_on_launch = true
+  availability_zone       = "ap-northeast-2a"
+  tags = { Name = "k3s-public-subnet" }
+}
+
+resource "aws_subnet" "private" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.2.0/24"
+  availability_zone = "ap-northeast-2a"
+  tags = { Name = "k3s-private-subnet" }
+}
+
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.main.id
+  tags = { Name = "k3s-igw" }
+}
+
+# ==========================================
+# 💡 여기서부터 NAT 스위치(var.enable_nat)가 적용된 부분입니다!
+# ==========================================
+
+resource "aws_eip" "nat" {
+  count  = var.enable_nat ? 1 : 0
+  domain = "vpc"
+}
+
+resource "aws_nat_gateway" "nat" {
+  count         = var.enable_nat ? 1 : 0
+  
+  # count가 적용된 리소스는 [0] 인덱스로 접근해야 합니다.
+  allocation_id = aws_eip.nat[0].id
+  subnet_id     = aws_subnet.public.id
+  tags = { Name = "k3s-nat" }
+}
+
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+}
+
+resource "aws_route_table_association" "public" {
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public.id
+}
+
+# 기존에 있던 route { ... } 블록을 제거하여 빈 껍데기로 만듭니다.
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+}
+
+# NAT Gateway가 생성될 때만(enable_nat = true), Private 라우팅 규칙을 추가합니다.
+resource "aws_route" "private_nat_route" {
+  count                  = var.enable_nat ? 1 : 0
+  
+  route_table_id         = aws_route_table.private.id
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = aws_nat_gateway.nat[0].id
+}
+
+resource "aws_route_table_association" "private" {
+  subnet_id      = aws_subnet.private.id
+  route_table_id = aws_route_table.private.id
+}
+# FILE: ./01-network/terragrunt.hcl
+include "root" {
+  path = find_in_parent_folders()
+}
+
+inputs = {
+  # 👇 스위치 조작부 (필요할 때만 true로 바꾸고 배포!)
+  enable_nat = true
+}
+# FILE: ./01-network/outputs.tf
+output "vpc_id" { value = aws_vpc.main.id }
+output "public_subnet_id" { value = aws_subnet.public.id }
+output "private_subnet_id" { value = aws_subnet.private.id }
+# FILE: ./02-security/variables.tf
+variable "vpc_id" { type = string }
+# FILE: ./02-security/main.tf
+resource "aws_security_group" "jump_server_sg" {
+  name   = "jump-server-sg"
+  # data 블록을 통해 1단계의 출력을 참조
+  vpc_id = var.vpc_id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_security_group" "k3s_cluster_sg" {
+  name   = "k3s-cluster-sg"
+  vpc_id = var.vpc_id
+
+  ingress {
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [aws_security_group.jump_server_sg.id]
+  }
+  ingress {
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
+    self      = true
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+# FILE: ./02-security/terragrunt.hcl
+# 02-security/terragrunt.hcl
+include "root" {
+  path = find_in_parent_folders()
+}
+
+dependency "network" {
+  config_path = "../01-network"
+
+  mock_outputs = {
+    vpc_id = "vpc-mock-12345"
+  }
+}
+
+# 01-network의 output 값을 02-security의 변수(vpc_id)로 자동 주입
+inputs = {
+  vpc_id = dependency.network.outputs.vpc_id
+}
+# FILE: ./02-security/outputs.tf
+output "jump_sg_id" { value = aws_security_group.jump_server_sg.id }
+output "k3s_sg_id" { value = aws_security_group.k3s_cluster_sg.id }
+# FILE: ./modules/k3s-cluster/iam.tf
+# FILE: ./modules/k3s-cluster/iam.tf
+
+data "aws_iam_policy_document" "ec2_assume_role" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "k3s_node_role" {
+  name               = "k3s-node-role"
+  assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
+}
+
+resource "aws_iam_role_policy_attachment" "ssm_core" {
+  role       = aws_iam_role.k3s_node_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_instance_profile" "k3s_node_profile" {
+  name = "k3s-node-profile"
+  role = aws_iam_role.k3s_node_role.name
+}
+# FILE: ./modules/k3s-cluster/variables.tf
+variable "master_instance_type" { type = string }
+variable "worker_instance_type" { type = string }
+variable "sg_id" { type = string }
+variable "subnet_id" { type = string }
+variable "key_name" { type = string }
+# FILE: ./modules/k3s-cluster/main.tf
+data "aws_ami" "ubuntu_arm" {
+  most_recent = true
+  owners      = ["099720109477"]
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-arm64-server-*"]
+  }
+}
+
+resource "random_password" "k3s_token" {
+  length  = 32
+  special = false
+}
+
+resource "aws_instance" "master" {
+  ami                    = data.aws_ami.ubuntu_arm.id
+  instance_type          = var.master_instance_type
+  vpc_security_group_ids = [var.sg_id]
+  subnet_id              = var.subnet_id
+  key_name               = var.key_name
+  iam_instance_profile   = aws_iam_instance_profile.k3s_node_profile.name
+  
+  user_data = <<-EOF
+    #!/bin/bash
+    curl -sfL https://get.k3s.io | K3S_TOKEN="${random_password.k3s_token.result}" sh -s - server --cluster-init
+  EOF
+
+  tags = { Name = "k3s-Master" }
+}
+
+locals { worker_nodes = ["Platform", "Monitoring", "General"] }
+
+resource "aws_instance" "workers" {
+  for_each               = toset(local.worker_nodes)
+  
+  ami                    = data.aws_ami.ubuntu_arm.id
+  instance_type          = var.worker_instance_type
+  vpc_security_group_ids = [var.sg_id]
+  subnet_id              = var.subnet_id
+  key_name               = var.key_name
+  depends_on             = [aws_instance.master]
+  iam_instance_profile   = aws_iam_instance_profile.k3s_node_profile.name
+
+  user_data = <<-EOF
+    #!/bin/bash
+    curl -sfL https://get.k3s.io | K3S_URL="https://${aws_instance.master.private_ip}:6443" K3S_TOKEN="${random_password.k3s_token.result}" sh -
+  EOF
+
+  tags = { Name = "k3s-Worker-${each.key}" }
+}
+# FILE: ./modules/k3s-cluster/outputs.tf
+output "master_private_ip" { value = aws_instance.master.private_ip }
+# FILE: ./modules/jump-server/variables.tf
+variable "instance_type" { type = string }
+variable "sg_id" { type = string }
+variable "subnet_id" { type = string }
+variable "key_name" { type = string }
+# FILE: ./modules/jump-server/main.tf
+data "aws_ami" "ubuntu_x86" {
+  most_recent = true
+  owners      = ["099720109477"]
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*"]
+  }
+}
+
+resource "aws_instance" "jump_server" {
+  ami                    = data.aws_ami.ubuntu_x86.id
+  instance_type          = var.instance_type
+  vpc_security_group_ids = [var.sg_id]
+  subnet_id              = var.subnet_id
+  key_name               = var.key_name
+
+  tags = { Name = "JumpServer" }
+}
+# FILE: ./modules/jump-server/outputs.tf
+output "public_ip" { value = aws_instance.jump_server.public_ip }

@@ -1,4 +1,4 @@
-name: 'Terragrunt Destroy'
+name: 'Terragrunt Destroy (OIDC)'
 
 on:
   workflow_dispatch: # 이 옵션이 있으면 깃허브 웹에서 '버튼'이 생깁니다.
