@@ -1,0 +1,25 @@
+# argocd/root-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root-llmops-architecture
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/your-username/aws-llmops-portfolio.git' # 본인 깃허브 주소로 변경
+    targetRevision: main
+    path: manifests
+    directory:
+      recurse: true # 하위 디렉토리(01, 02, 03)의 매니페스트를 자동으로 모두 탐색
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: llmops
+  syncPolicy:
+    automated:
+      prune: true     # Git에서 파일 삭제 시 K8s 리소스도 자동 삭제
+      selfHeal: true  # K8s 리소스 임의 수정 시 Git 상태로 강제 복구
+    syncOptions:
+      - CreateNamespace=true # 네임스페이스 자동 생성 허용

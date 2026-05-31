@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: statefulset-vector-db
+  namespace: llmops
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  serviceName: "service-vector-db"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vector-db
+  template:
+    metadata:
+      labels:
+        app: vector-db
+    spec:
+      containers:
+      - name: chromadb
+        image: chromadb/chroma:0.4.24
+        imagePullPolicy: IfNotPresent # 로컬 캐시 이미지를 우선 사용
+        ports:
+        - containerPort: 8000
+          name: db-port
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "1000m"
+            memory: "2Gi"
+        volumeMounts:
+        - name: database-volume
+          mountPath: /chroma/chroma
+  volumeClaimTemplates:
+  - metadata:
+      name: database-volume
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 20Gi # k3d 기본 프로비저너(local-path)가 작동하여 PC 디스크를 사용합니다.
