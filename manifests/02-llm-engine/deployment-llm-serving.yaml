@@ -33,3 +33,22 @@ spec:
           postStart:
             exec:
               command: ["/bin/sh", "-c", "sleep 10 && ollama pull llama3"]
+
+        ports:
+        - containerPort: 11434
+          name: llm-port
+          
+        # [추가] 모델 다운로드가 끝날 때까지 K8s가 최대 10분간 컨테이너 강제 재시작을 유예함
+        startupProbe:
+          httpGet:
+            path: /
+            port: 11434
+          failureThreshold: 60
+          periodSeconds: 10
+          
+        # [추가] 모델이 온전히 메모리에 로드되어 실제 트래픽을 받을 준비가 되었는지 검증
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 11434
+          periodSeconds: 10
