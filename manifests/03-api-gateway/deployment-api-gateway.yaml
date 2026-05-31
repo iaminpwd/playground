@@ -1,3 +1,4 @@
+# FILE: ./manifests/03-api-gateway/deployment-api-gateway.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -6,7 +7,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "3"
 spec:
-  replicas: 2
+  replicas: 1 # 이전 트러블슈팅에서 파악한 널뛰기 방지를 위해 1로 고정
   selector:
     matchLabels:
       app: api-gateway
@@ -17,13 +18,11 @@ spec:
     spec:
       containers:
       - name: api-gateway-container
-        image: llm-gateway:local # Docker Hub 대신 로컬 빌드 이미지 태그 명시
-        imagePullPolicy: IfNotPresent # 반드시 명시하여 로컬 주입 이미지를 탐색하게 함
-    ports:
-      - port: 80
-        targetPort: 8000 # 트래픽 목적지 포트를 8000으로 동기화
-        protocol: TCP
-        name: http
+        image: llm-gateway:local
+        imagePullPolicy: IfNotPresent 
+        ports:
+        - containerPort: 8000 # 올바른 컨테이너 포트 속성 사용
+          name: http
         resources:
           requests:
             cpu: "500m"
