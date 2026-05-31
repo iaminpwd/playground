@@ -5,3 +5,4 @@ requests==2.31.0
 gptcache==0.1.43
 onnxruntime==1.16.3
 faiss-cpu==1.7.4
+chromadb-client==0.4.24.2
