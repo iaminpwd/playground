@@ -9,7 +9,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/your-username/aws-llmops-portfolio.git' # 본인 깃허브 주소로 변경
+    repoURL: 'https://github.com/iaminpwd/k8s-llmops-rag.git' 
     targetRevision: main
     path: manifests
     directory:
