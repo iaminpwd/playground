@@ -33,7 +33,7 @@ spec:
         lifecycle:
           postStart:
             exec:
-              command: ["/bin/sh", "-c", "sleep 10 && ollama pull llama3"]
+              command: ["/bin/sh", "-c", "sleep 10 && ollama pull llama3 &"]
         
         # 중복된 ports 선언 블록 삭제 완료
 
