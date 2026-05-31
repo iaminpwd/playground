@@ -1,0 +1,20 @@
+# ./manifests/03-api-gateway/ingress-api-gateway.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-api-gateway
+  namespace: llmops
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+    argocd.argoproj.io/sync-wave: "4" # 백엔드가 모두 준비된 후 가장 마지막에 라우팅 시작
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: service-api-gateway
+            port:
+              number: 80

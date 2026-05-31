@@ -11,4 +11,4 @@ spec:
     name: http
   selector:
     app: api-gateway
-  type: LoadBalancer # k3d가 이를 가로채서 로컬 PC의 지정된 포트(8080)와 연결해줍니다.
+  type: ClusterIP 
