@@ -1,0 +1,40 @@
+name: destroy
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: terraform-deploy
+  cancel-in-progress: false
+
+jobs:
+  terraform-destroy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v3
+
+      - name: Terraform 설치
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+          terraform_wrapper: false
+
+      - name: AWS 자격 증명 설정
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2
+
+      - name: Windows Server 내부 설정 찌꺼기 초기화 (SSM)
+        continue-on-error: true  # 초기화 실패가 인프라 삭제 자체를 막지 않도록 설정
+        shell: bash
+        run: |
+          chmod +x ./scripts/cleanup_vpn.sh
+          ./scripts/cleanup_vpn.sh
+
+      - name: Terraform 초기화 및 삭제
+        run: |
+          terraform init
+          terraform destroy -auto-approve
