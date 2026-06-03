@@ -1,0 +1,34 @@
+---
+# 1. K3s 설치 스크립트 실행
+- name: K3s 설치 (Master 노드 설정)
+  shell: |
+    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server \
+    --write-kubeconfig-mode 644 \
+    --disable traefik \
+    --disable servicelb" sh -
+  args:
+    creates: /usr/local/bin/k3s
+
+# 2. 노드 상태 확인 대기
+- name: K3s 서비스 시작 및 노드 준비 대기
+  command: kubectl get nodes
+  register: nodes_ready
+  until: '" Ready " in nodes_ready.stdout'
+  retries: 10
+  delay: 10
+
+# 3. 로컬 PC에서 제어하기 위해 kubeconfig 파일 가져오기
+- name: kubeconfig 파일을 로컬로 복사
+  fetch:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: ~/.kube/config-oci-blockchain
+    flat: yes
+
+# 4. 가져온 파일의 IP 주소를 퍼블릭 IP로 수정 (로컬 접속용)
+- name: kubeconfig 내 호스트 주소를 퍼블릭 IP로 변경
+  delegate_to: localhost
+  become: no
+  replace:
+    path: ~/.kube/config-oci-blockchain
+    regexp: '127.0.0.1'
+    replace: "{{ ansible_host }}"
