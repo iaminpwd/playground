@@ -1,0 +1,63 @@
+# ./roles/kubecost/templates/values.yaml.j2
+global:
+  clusterId: "finops-k3s"
+  prometheus:
+    # 내장 프로메테우스 끄기 및 메인 주소 매핑
+    enabled: false 
+    fqdn: "http://prometheus-kube-prometheus-prometheus.{{ prometheus_namespace }}.svc:9090"
+  grafana:
+    enabled: false
+    proxy: false 
+
+# 메인 프로메테우스가 Kubecost 데이터를 수집하고 규칙을 가져가도록 허용
+serviceMonitor:
+  enabled: true
+prometheusRule:
+  enabled: true
+
+kubecostFrontend:
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "10m"
+    limits:
+      memory: "128Mi"
+  livenessProbe:
+    initialDelaySeconds: 60
+    periodSeconds: 20
+
+kubecostProductConfigs:
+  grafanaURL: ""
+
+forecasting:
+  enabled: false
+
+kubecostModel:
+  retentionDaily: 3
+  retentionHourly: 3
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "50m"
+    limits:
+      memory: "512Mi"
+
+kubecostAggregator:
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+
+customPricing:
+  enabled: true
+  cpu: "0.0316"
+  ram: "0.0042"
+  storage: "0.0001"
+
+
+
+nodeSelector:
+  "kubernetes.io/hostname": "{{ target_worker_node }}"
+  

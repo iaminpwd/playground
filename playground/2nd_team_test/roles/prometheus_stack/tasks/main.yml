@@ -1,0 +1,37 @@
+---
+- name: Helm 설치 여부 확인
+  stat:
+    path: /usr/local/bin/helm
+  register: helm_bin
+
+- name: Helm 설치 스크립트 실행
+  shell: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  when: not helm_bin.stat.exists
+
+- name: Prometheus Community 헬름 리포지토리 추가
+  kubernetes.core.helm_repository:
+    name: prometheus-community
+    repo_url: "https://prometheus-community.github.io/helm-charts"
+
+- name: Prometheus 설정 파일 템플릿 생성
+  template:
+    src: prometheus-values.yaml.j2
+    dest: /tmp/prometheus-values.yaml
+
+- name: Grafana 설정 파일 템플릿 생성
+  template:
+    src: grafana-values.yaml.j2
+    dest: /tmp/grafana-values.yaml
+
+- name: Kube-Prometheus-Stack 차트 배포
+  kubernetes.core.helm:
+    name: prometheus
+    chart_ref: prometheus-community/kube-prometheus-stack
+    release_namespace: "{{ prometheus_namespace }}"
+    create_namespace: true
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+    values_files:
+      - /tmp/prometheus-values.yaml
+      - /tmp/grafana-values.yaml
+    wait: true
+    timeout: 600s

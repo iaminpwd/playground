@@ -1,0 +1,8 @@
+# setup_monitoring.yml
+---
+- name: K3s 클러스터 통합 모니터링 구축
+  hosts: master
+  gather_facts: false
+  roles:
+    - { role: prometheus_stack, tags: ['prom'] }
+    - { role: kubecost, tags: ['cost'] }

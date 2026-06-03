@@ -1,0 +1,36 @@
+---
+- name: Helm 설치 여부 확인
+  stat:
+    path: /usr/local/bin/helm
+  register: helm_bin
+
+- name: Helm 설치 스크립트 실행
+  shell: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  when: not helm_bin.stat.exists
+
+- name: Kubecost 리포지토리 추가 및 업데이트
+  shell: |
+    helm repo add kubecost https://kubecost.github.io/cost-analyzer/
+    helm repo update
+
+#- name: 이전 버전 찌꺼기 제거 (에러 방지)
+#  shell: |
+#    helm uninstall kubecost -n {{ kubecost_namespace }} || true
+#    kubectl delete pvc --all -n {{ kubecost_namespace }} || true
+
+- name: Kubecost 설정 파일 생성
+  template:
+    src: values.yaml.j2
+    dest: /tmp/kubecost_values.yaml
+
+- name: Kubecost v2.3.1 차트 배포
+  kubernetes.core.helm:
+    name: kubecost
+    chart_ref: kubecost/cost-analyzer
+    chart_version: "2.3.1"
+    release_namespace: "{{ kubecost_namespace }}"
+    create_namespace: true
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+    values_files:
+      - /tmp/kubecost_values.yaml
+    wait: false

@@ -1,0 +1,6 @@
+prometheus_namespace: "monitoring"
+kubecost_namespace: "monitoring"
+
+target_worker_node: "k3s-worker-1" 
+
+grafana_admin_password: "1234"

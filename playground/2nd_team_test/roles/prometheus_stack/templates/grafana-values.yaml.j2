@@ -1,0 +1,30 @@
+# ./roles/prometheus_stack/templates/grafana-values.yaml.j2
+grafana:
+  adminPassword: "{{ grafana_admin_password }}"
+  nodeSelector:
+    kubernetes.io/hostname: "{{ target_worker_node }}"
+    
+
+  persistence:
+    enabled: true
+    type: pvc
+    size: 500Mi
+    # storageClassName: "gp3"  # AWS 환경이라면 gp3 입력을 추천합니다.
+
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "128Mi"
+    limits:
+      cpu: "200m"
+      memory: "512Mi"
+  
+  grafana.ini:
+    dashboards:
+      min_refresh_interval: 1s
+
+  dashboards:
+    default:
+      kubecost-official:
+        url: "https://raw.githubusercontent.com/kubecost/cost-analyzer-helm-chart/develop/cost-analyzer/dashboards/cost-overview.json"
+        datasource: Prometheus
