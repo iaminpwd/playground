@@ -1,0 +1,9 @@
+---
+# K3s 관련 전역 설정
+k3s_port: "6443"
+k3s_token_path: "/var/lib/rancher/k3s/server/node-token"
+k3s_config_path: "/etc/rancher/k3s/k3s.yaml"
+kube_user_dir: "/home/{{ ansible_user }}/.kube"
+
+# Helm 관련 설정
+helm_install_url: "https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3"

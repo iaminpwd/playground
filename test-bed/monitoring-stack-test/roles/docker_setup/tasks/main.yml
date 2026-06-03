@@ -1,0 +1,63 @@
+---
+- name: 도커 설치를 위한 필수 패키지 설치
+  apt:
+    name: [ 'apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common', 'python3-pip' ]
+    state: present
+    update_cache: true
+
+- name: 도커 공식 GPG 키 저장 디렉토리 생성
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: 도커 공식 GPG 키 추가 (최신 방식)
+  get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: '0644'
+
+- name: 도커 레포지토리 추가 (OS 버전에 맞춰 자동 설정)
+  apt_repository:
+    repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    state: present
+
+- name: 도커 엔진 설치
+  apt:
+    name: [ 'docker-ce', 'docker-ce-cli', 'containerd.io' ]
+    state: present
+    update_cache: true
+
+- name: 앤서블 도커 제어용 파이썬 라이브러리 설치
+  pip:
+    name: docker
+
+# --- 여기서부터 sudo 없이 사용하기 위한 설정 ---
+
+- name: docker 그룹이 존재하는지 확인
+  group:
+    name: docker
+    state: present
+
+- name: 현재 사용자를 docker 그룹에 추가
+  user:
+    name: "{{ ansible_user | default('vagrant') }}"
+    groups: docker
+    append: true
+
+- name: 도커 서비스 시작 및 활성화
+  systemd:
+    name: docker
+    state: started
+    enabled: true
+
+- name: 그룹 변경 사항 적용을 위해 SSH 세션 재시작 (선택 사항)
+  meta: reset_connection
+
+- name: "도커 파이썬 라이브러리 설치"
+  become: true
+  pip:
+    name: 
+      - docker
+      - docker-compose
+    state: present

@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-db
+  template:
+    metadata:
+      labels:
+        app: mysql-db
+    spec:
+      # [1] db1 노드에만 배포되도록 설정 (이미 이름표 붙여두셨죠?)
+      nodeSelector:
+        node-role: db
+      
+      containers:
+        # 1. 메인 컨테이너: MySQL
+        - name: mysql
+          image: mysql:8.0
+          args:
+            # MySQL 8.0의 기본 인증 방식을 엑스포터가 알아듣도록 구버전 방식으로 열어줍니다.
+            - "--default-authentication-plugin=mysql_native_password"
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-root-password
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+
+        # 2. 사이드카: MySQL Exporter (설정 파일 마운트 방식)
+        - name: mysql-exporter
+          image: prom/mysqld-exporter:latest
+          args:
+            # [핵심] 환경 변수 대신, 마운트된 설정 파일(/etc/mysql-exporter/my.cnf)을 읽으라고 명령합니다.
+            - "--config.my-cnf=/etc/mysql-exporter/my.cnf"
+          ports:
+            - containerPort: 9104
+          volumeMounts:
+            # [핵심] 아래 volumes에서 정의한 설정을 컨테이너 안의 특정 경로에 파일로 꽂아줍니다.
+            - name: exporter-config
+              mountPath: /etc/mysql-exporter
+              readOnly: true
+      
+      volumes:
+        - name: mysql-data
+          emptyDir: {}
+        
+        # [핵심] ConfigMap에 들어있는 'my.cnf' 데이터를 볼륨으로 변환합니다.
+        - name: exporter-config
+          configMap:
+            name: mysql-exporter-cfg
+            items:
+              - key: my.cnf        # ConfigMap 안의 키 이름
+                path: my.cnf       # 컨테이너 안에 생성될 파일 이름

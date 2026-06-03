@@ -1,0 +1,18 @@
+---
+- name: Nginx 및 HPA 설정 파일 전송
+  template:
+    src: "{{ item.src }}"
+    dest: "/tmp/{{ item.dest }}"
+  loop:
+    - { src: 'nginx-conf.yaml.j2', dest: 'nginx-conf.yaml' }
+    - { src: 'nginx-deployment.yaml.j2', dest: 'nginx-deployment.yaml' }
+    # [추가] HPA 템플릿 파일 전송
+    - { src: 'nginx-hpa.yaml.j2', dest: 'nginx-hpa.yaml' }
+
+- name: 쿠버네티스 Nginx 및 HPA 배포
+  shell: "kubectl apply -f /tmp/{{ item }}"
+  loop:
+    - nginx-conf.yaml
+    - nginx-deployment.yaml
+    # [추가] HPA 적용 (Deployment가 먼저 배포된 후 실행되어야 함)
+    - nginx-hpa.yaml

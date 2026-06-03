@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-web
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-web
+  template:
+    metadata:
+      labels:
+        app: nginx-web
+    spec:
+      nodeSelector:
+        node-role: web
+      containers:
+        # 1. Nginx 컨테이너
+        - name: nginx
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "100m"      # 최소 0.1 코어 보장
+              memory: "128Mi"  # 최소 128MiB 보장
+            limits:
+              cpu: "200m"      # 최대 0.2 코어 제한
+              memory: "256Mi"  # 최대 256MiB 제한
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+
+        # 2. 사이드카: Nginx Exporter
+        - name: nginx-exporter
+          image: nginx/nginx-prometheus-exporter:latest
+          args:
+            - "-nginx.scrape-uri=http://127.0.0.1/metrics"
+          ports:
+            - containerPort: 9113
+          resources:
+            requests:
+              cpu: "10m"       # 매우 가벼움
+              memory: "32Mi"
+            limits:
+              cpu: "50m"
+              memory: "64Mi"
+      
+      volumes:
+        - name: config-volume
+          configMap:
+            name: nginx-config

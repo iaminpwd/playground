@@ -1,0 +1,6 @@
+---
+
+- import_playbook: playbooks/01-setup-env.yml
+- import_playbook: playbooks/02-install-k3s.yml
+- import_playbook: playbooks/03-monitoring.yml
+- import_playbook: playbooks/04-install-pods.yml

@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: default
+data:
+  default.conf: |
+    server {
+        listen 80;
+        server_name localhost;
+
+        location / {
+            root /usr/share/nginx/html;
+            index index.html index.htm;
+        }
+
+        # [핵심] Exporter가 메트릭을 읽어갈 경로
+        location /metrics {
+            stub_status on;
+            allow 127.0.0.1; # 같은 파드 안의 사이드카만 허용
+            deny all;
+        }
+    }

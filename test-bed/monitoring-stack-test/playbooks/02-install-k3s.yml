@@ -1,0 +1,18 @@
+---
+- name: 모든 노드 기초 설정
+  hosts: cluster
+  become: true
+  roles:
+    - common
+
+- name: K3s 마스터 노드 구성
+  hosts: control-plane
+  become: true
+  roles:
+    - k3s_master
+
+- name: K3s 워커 노드 구성
+  hosts: workers
+  become: true
+  roles:
+    - k3s_worker

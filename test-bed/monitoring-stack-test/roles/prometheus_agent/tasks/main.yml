@@ -1,0 +1,27 @@
+---
+- name: 모니터링 네임스페이스 생성
+  shell: kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+
+# 1. 앤서블 노드에서 모든 템플릿을 렌더링해서 마스터의 /tmp로 보냅니다.
+# 이때 lookup('template', ...)이 작동하여 알맹이가 껍데기 안으로 쏙 들어갑니다.
+- name: 에이전트 매니페스트 파일 렌더링 및 전송
+  template:
+    src: "{{ item.src }}"
+    dest: "/tmp/{{ item.dest }}"
+  loop:
+    - { src: 'prometheus-rbac.yaml.j2', dest: 'prometheus-rbac.yaml' }
+    - { src: 'prometheus-agent-conf.yml.j2', dest: 'prometheus-config.yaml' }
+    - { src: 'node-exporter.yaml.j2', dest: 'node-exporter.yaml' }
+    - { src: 'prometheus-agent.yaml.j2', dest: 'prometheus-agent.yaml' }
+
+# 2. [중요] 기존의 'kubectl create configmap' 태스크는 삭제해야 합니다!
+# 이미 1번에서 완벽한 ConfigMap 매니페스트(/tmp/prometheus-config.yaml)를 만들었기 때문입니다.
+
+# 3. 마스터 노드에 생성된 파일들을 순서대로 apply 합니다.
+- name: 쿠버네티스 리소스 배포
+  shell: "kubectl apply -f /tmp/{{ item }}"
+  loop:
+    - prometheus-rbac.yaml
+    - prometheus-config.yaml
+    - node-exporter.yaml
+    - prometheus-agent.yaml

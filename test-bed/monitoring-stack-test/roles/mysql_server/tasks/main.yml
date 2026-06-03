@@ -1,0 +1,13 @@
+- name: MySQL 매니페스트 전송
+  template:
+    src: "{{ item }}"
+    dest: "/tmp/{{ item | replace('.j2', '') }}"
+  loop:
+    - mysql-config.yaml.j2
+    - mysql-deployment.yaml.j2
+
+- name: MySQL 배포 실행
+  shell: "kubectl apply -f /tmp/{{ item }}"
+  loop:
+    - mysql-config.yaml
+    - mysql-deployment.yaml

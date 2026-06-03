@@ -1,0 +1,9 @@
+# roles/monitoring_stack/vars/main.yml
+grafana_dashboards:
+  - { id: 12708, revision: 1, name: "nginx" }
+  - { id: 1860, revision: 31, name: "node_exporter" }
+  - { id: 15282, revision: 1, name: "k3s_cluster" }
+  - { id: 7362, revision: 5, name: "mysql" }
+
+grafana_dashboards_dir: "/var/lib/grafana/dashboards"
+

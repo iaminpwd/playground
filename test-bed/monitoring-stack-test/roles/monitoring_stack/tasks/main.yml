@@ -1,0 +1,93 @@
+---
+# 0. 자동 리셋 로직
+- name: "그라파나 데이터 폴더 상태 확인"
+  stat:
+    path: "{{ base_dir }}/grafana_data"
+  register: grafana_dir_stat
+
+- name: "기본 데이터 존재 시 자동 삭제 (Clean Reset)"
+  file:
+    path: "{{ base_dir }}/grafana_data"
+    state: absent
+  when: grafana_dir_stat.stat.exists
+
+# 1. 디렉토리 생성 및 권한 설정
+- name: "모니터링 시스템 디렉토리 생성"
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.owner }}"
+    mode: '0755'
+    recurse: yes  # 핵심: 내부 하위 파일(grafana.db 등)까지 모두 권한 강제 적용
+  loop:
+    - { path: '/etc/prometheus', owner: 'root' }
+    - { path: '/etc/grafana/provisioning/dashboards', owner: '472' }
+    - { path: '/etc/grafana/provisioning/datasources', owner: '472' }
+    - { path: '/etc/grafana/provisioning/alerting', owner: '472' }
+    - { path: '{{ base_dir }}/prometheus_data', owner: '65534' }
+    - { path: '{{ base_dir }}/grafana_data', owner: '472' }
+    - { path: '{{ base_dir }}/grafana_dashboards', owner: '472' }
+
+# 2. 설정 파일 배포
+- name: "프로비저닝 및 메인 설정 파일 배포"
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ item.owner | default('root') }}"
+  loop:
+    - { src: 'prometheus.yml.j2', dest: '/etc/prometheus/prometheus.yml' }
+    - { src: 'alerting.yml.j2', dest: '/etc/grafana/provisioning/alerting/alerting.yml', owner: '472' }
+    - { src: 'datasources.yml.j2', dest: '/etc/grafana/provisioning/datasources/datasources.yml', owner: '472' }
+    - { src: 'dashboards.yml.j2', dest: '/etc/grafana/provisioning/dashboards/dashboards.yml', owner: '472' }
+    - { src: 'docker-compose.yml.j2', dest: '{{ base_dir }}/docker-compose.yml' }
+  notify: "Restart monitoring stack"
+
+- name: "커스텀 대시보드 JSON 전송"
+  copy:
+    src: files/custom_dashboard.json
+    dest: "{{ base_dir }}/grafana_dashboards/custom_dashboard.json"
+    owner: '472'
+    group: '472'
+    mode: '0644'
+
+# 3. 대시보드 다운로드 및 전처리 (수정됨)
+- name: "그라파나 대시보드 템플릿 다운로드"
+  get_url:
+    url: "https://grafana.com/api/dashboards/{{ item.id }}/revisions/{{ item.revision }}/download"
+    dest: "{{ base_dir }}/grafana_dashboards/{{ item.name }}.json"
+    owner: '472'
+    group: '472'
+  loop: "{{ grafana_dashboards }}"
+  when: grafana_dashboards is defined
+
+- name: "모든 대시보드의 데이터소스 변수 통합 치환"
+  replace:
+    path: "{{ base_dir }}/grafana_dashboards/{{ item }}.json"
+    regexp: '\$\{?DS_PROMETHEUS\}?'
+    replace: 'prometheus'
+  loop:
+    - k3s_cluster
+    - mysql
+    - nginx
+    - custom_dashboard
+  when: grafana_dashboards is defined
+
+- name: "대시보드별 개별 Job 이름표 매칭"
+  replace:
+    path: "{{ base_dir }}/grafana_dashboards/{{ item.file }}.json"
+    regexp: '"job": "({{ item.old_job }})"'
+    replace: '"job": "{{ item.new_job }}"'
+  loop:
+    - { file: 'k3s_cluster', old_job: 'node-exporter', new_job: 'kubernetes-nodes-exporter' }
+    - { file: 'mysql', old_job: 'mysql|mysqld_exporter', new_job: 'mysql-exporter' }
+    - { file: 'nginx', old_job: 'nginx-vts-exporter', new_job: 'nginx-exporter' }
+  when: grafana_dashboards is defined
+
+# 4. 도커 컴포즈 기동
+- name: "도커 컴포즈로 모든 서비스 실행"
+  community.docker.docker_compose_v2:
+    project_src: "{{ base_dir }}"
+    state: present
+    pull: always
+    recreate: always

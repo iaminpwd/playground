@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s  # [추가] 알람 규칙을 얼마나 자주 검사할지 결정합니다.
+  external_labels:
+    monitor: 'main-monitor'
+
+scrape_configs:
+  # 1. 프로메테우스 자체 메트릭 수집
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # 2. 모니터링 서버 호스트의 메트릭 수집 (Node Exporter)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['host.docker.internal:9100']
+
+  # 3. [참고] K3s 클러스터의 데이터는 원격 쓰기(Remote Write)로 수신하므로 
+  # 별도의 scrape_config 없이도 데이터가 쌓입니다.

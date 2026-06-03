@@ -1,0 +1,19 @@
+apiVersion: 1
+templates:
+  - name: "discord_template_group"
+    template: |
+      {{ define "discord_template_group" }}
+        {{ if gt (len .Alerts.Firing) 0 }}
+          {{ range .Alerts }}
+            ### 🚨 {{ .Annotations.summary }}
+            > **상세 내용:** {{ .Annotations.description }}
+
+            **[대상 인프라 정보]**
+            • **서버 별칭:** `{{ .Labels.alias }}`
+            • **IP 주소:** `{{ .Labels.node }}`
+            {{ if .Labels.horizontalpodautoscaler }}• **HPA 대상:** `{{ .Labels.horizontalpodautoscaler }}`{{ end }}
+            • **감지 시각:** {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+            ---
+          {{ end }}
+        {{ end }}
+      {{ end }}

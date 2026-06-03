@@ -1,0 +1,14 @@
+---
+- name: 앤서블 노드에 프로메테우스 서버 설치
+  hosts: localhost
+  connection: local
+  become: true
+  roles:
+    - docker_setup
+    - monitoring_stack
+
+- name: 모든 노드에 프로메테우스 에이전트 설치
+  hosts: master
+  become: true
+  roles:
+    - prometheus_agent

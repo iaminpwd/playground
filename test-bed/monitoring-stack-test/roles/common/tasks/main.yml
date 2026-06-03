@@ -1,0 +1,23 @@
+---
+- name: Swap 비활성화
+  shell: |
+    swapoff -a
+    sed -i '/swap/s/^/#/' /etc/fstab
+
+- name: 필수 패키지 설치
+  apt:
+    name:
+      - curl
+      - cifs-utils
+    state: present
+    update_cache: true
+
+- name: "리눅스 호스트네임을 hosts.ini 설정에 맞게 변경"
+  hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: "/etc/hosts 파일에 자기 자신 등록 (이름 풀이용)"
+  lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1'
+    line: "127.0.1.1 {{ inventory_hostname }}"

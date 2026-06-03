@@ -1,0 +1,12 @@
+---
+- name: Nginx, Nginx Exporter 배포
+  hosts: control-plane
+  become: true
+  roles:
+    - web_server
+
+- name: mysql, mysqld_exporter 배포
+  hosts: control-plane
+  become: true
+  roles:
+    - mysql_server

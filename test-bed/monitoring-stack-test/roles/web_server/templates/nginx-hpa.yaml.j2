@@ -1,0 +1,19 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: nginx-hpa
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment     # [확인] Deployment를 타겟으로 잡습니다.
+    name: nginx-web      # Deployment의 이름과 일치해야 함
+  minReplicas: 1         # 최소 파드 수
+  maxReplicas: 5         # 최대 파드 수
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60 # CPU 사용량이 60%를 넘으면 스케일 아웃!

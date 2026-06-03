@@ -1,0 +1,13 @@
+apiVersion: 1
+
+providers:
+  # [통합] 'DefaultDashboards'와 'Custom Dashboards'를 하나로 합쳤습니다.
+  - name: 'Combined-Provisioned-Dashboards'
+    orgId: 1
+    folder: ''  # 특정 폴더에 넣고 싶다면 'Infrastructure' 등으로 수정 가능합니다.
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      # 컨테이너 내부 경로입니다. (main.yml의 볼륨 매핑과 일치)
+      path: /var/lib/grafana/dashboards

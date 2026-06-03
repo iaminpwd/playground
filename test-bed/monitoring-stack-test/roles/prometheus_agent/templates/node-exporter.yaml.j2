@@ -1,0 +1,23 @@
+# roles/monitoring_k8s/templates/node-exporter.yaml.j2
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: node-exporter
+  template:
+    metadata:
+      labels:
+        app: node-exporter
+    spec:
+      # [hostNetwork: true]: 컨테이너 안이 아니라 실제 노드의 네트워크 지표를 수집하기 위해 필요합니다.
+      hostNetwork: true
+      hostPID: true
+      containers:
+      - name: node-exporter
+        image: prom/node-exporter:latest
+        ports:
+        - containerPort: 9100

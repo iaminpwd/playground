@@ -1,0 +1,137 @@
+apiVersion: 1 # [수정] 오타 교체
+
+# 1. 알림 전송 채널 설정
+contactPoints:
+  - orgId: 1
+    name: Discord-Alert
+    receivers:
+      - uid: discord_receiver_1
+        type: discord
+        settings:
+          url: '{{ alert_webhook_url }}'
+          # 템플릿 연동이 복잡할 경우를 대비해 기본 메시지 형식을 권장합니다.
+          message: "🚨 인프라 알람 발생: {{ '{{' }} .CommonAnnotations.summary {{ '}}' }}"
+
+# 2. 알림 라우팅 정책
+policies:
+  - orgId: 1
+    receiver: Discord-Alert
+    group_by: [alertname, instance] # [수정] nodename 대신 정리된 instance 사용
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
+
+# 3. 알림 규칙 통합 정의
+groups:
+  - orgId: 1
+    name: infrastructure
+    folder: alert
+    interval: 1m
+    rules:
+      # --- 1. 서버 다운 알람 ---
+      - uid: server_health_check_uid
+        title: Server Down Alert
+        condition: C
+        for: 1m
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              # [최적화] 이미 라벨링이 끝난 'up' 메트릭을 그대로 사용합니다.
+              expr: "up == 0"
+          - refId: B
+            datasourceUid: __expr__
+            model: {expression: A, reducer: last, type: reduce}
+          - refId: C
+            datasourceUid: __expr__
+            model: {expression: B, type: threshold, conditions: [{evaluator: {params: [1], type: lt}, operator: {type: and}, query: {params: [B]}, reducer: {type: last}, type: query}]}
+        annotations:
+          summary: "🚨 서버 다운 감지: {{ '{{' }} $labels.instance {{ '}}' }}"
+          description: "대상 서버: {{ '{{' }} $labels.instance {{ '}}' }}\n서버의 응답이 없습니다. 상태를 확인하세요."
+
+      # --- 2. CPU 사용량 위험 (80% 초과) ---
+      - uid: cpu_usage_alert_uid
+        title: CPU 사용량 위험
+        condition: C
+        for: 1m
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              # [최적화] 호스트 이름별 CPU 사용률 계산
+              expr: "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)"
+          - refId: B
+            datasourceUid: __expr__
+            model: {expression: A, reducer: last, type: reduce}
+          - refId: C
+            datasourceUid: __expr__
+            model: {expression: B, type: threshold, conditions: [{evaluator: {params: [80], type: gt}, operator: {type: and}, query: {params: [B]}, reducer: {type: last}, type: query}]}
+        annotations:
+          summary: "🔥 CPU 과부하 경고: {{ '{{' }} $labels.instance {{ '}}' }}"
+          description: "대상 서버: {{ '{{' }} $labels.instance {{ '}}' }}\n현재 CPU 사용률: {{ '{{' }} $values.B.Value | printf \"%.2f\" {{ '}}' }}%"
+
+      # --- 3. 메모리 사용량 위험 (90% 초과) ---
+      - uid: memory_usage_alert_uid
+        title: memory 사용량 위험
+        condition: C
+        for: 5m
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))"
+          - refId: B
+            datasourceUid: __expr__
+            model: {expression: A, reducer: last, type: reduce}
+          - refId: C
+            datasourceUid: __expr__
+            model: {expression: B, type: threshold, conditions: [{evaluator: {params: [90], type: gt}, operator: {type: and}, query: {params: [B]}, reducer: {type: last}, type: query}]}
+        annotations:
+          summary: "⚠️ [메모리 부족] {{ '{{' }} $labels.instance {{ '}}' }}"
+          description: "대상 서버: {{ '{{' }} $labels.instance {{ '}}' }}\n현재 메모리 사용률: {{ '{{' }} $values.B.Value | printf \"%.2f\" {{ '}}' }}%"
+
+      # --- 4. 디스크 용량 부족 위험 (20% 미만) ---
+      - uid: disk_usage_alert_uid
+        title: "disk 사용량 위험"
+        condition: C
+        for: 2m
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: "(node_filesystem_avail_bytes{mountpoint='/'} / node_filesystem_size_bytes{mountpoint='/'}) * 100"
+          - refId: B
+            datasourceUid: __expr__
+            model: {expression: A, reducer: last, type: reduce}
+          - refId: C
+            datasourceUid: __expr__
+            model: {expression: B, type: threshold, conditions: [{evaluator: {params: [20], type: lt}, operator: {type: and}, query: {params: [B]}, reducer: {type: last}, type: query}]}
+        annotations:
+          summary: "⚠️ 디스크 용량 부족 경고: {{ '{{' }} $labels.instance {{ '}}' }}"
+          description: "대상 서버: {{ '{{' }} $labels.instance {{ '}}' }}\n남은 공간 비율: {{ '{{' }} $values.B.Value | printf \"%.2f\" {{ '}}' }}%"
+
+      # --- 5. Nginx HPA ---
+      - uid: nginx_hpa_alert_uid
+        title: "nginx hpa"
+        condition: C
+        for: 1m
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              # 사용자님의 HPA 이름인 'nginx-hpa'로 필터링합니다.
+              expr: "kube_horizontalpodautoscaler_status_current_replicas{horizontalpodautoscaler='nginx-hpa'}"
+          - refId: B
+            datasourceUid: __expr__
+            model: {expression: A, reducer: last, type: reduce}
+          - refId: C
+            datasourceUid: __expr__
+            model: {expression: B, type: threshold, conditions: [{evaluator: {params: [2], type: gt}, operator: {type: and}, query: {params: [B]}, reducer: {type: last}, type: query}]}
+        annotations:
+          summary: "🚀 Nginx 스케일 아웃 감지"
+          description: "현재 복제본(Replicas) 수: {{ '{{' }} $values.B.Value | printf \"%.0f\" {{ '}}' }}개"

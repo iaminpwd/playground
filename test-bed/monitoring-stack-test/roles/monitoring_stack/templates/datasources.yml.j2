@@ -1,0 +1,12 @@
+apiVersion: 1
+
+datasources:
+  - name: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090 # 또는 이전에 성공한 URL
+    isDefault: true
+    # [핵심] UID를 명시적으로 'prometheus'라고 지정합니다.
+    # 대부분의 커뮤니티 대시보드들이 이 값을 기본으로 찾습니다.
+    uid: prometheus  
+    editable: true
