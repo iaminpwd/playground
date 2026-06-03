@@ -1,0 +1,38 @@
+name: 'Terragrunt Apply (OIDC)'
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-2
+
+      # 👇 실수로 지워졌던 부분 복구: 테라폼(알맹이) 설치
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Setup Terragrunt
+        uses: autero1/action-terragrunt@v3
+        with:
+          terragrunt-version: latest
+
+      # 👇 완벽하게 수정된 배포 단계 (토큰 주입)
+      - name: Terragrunt Apply via Makefile
+        env:
+          TF_VAR_github_token: ${{ secrets.ARGOCD_GITHUB_TOKEN }}
+        run: make apply ARGS="--non-interactive"
