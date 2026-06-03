@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/iaminpwd/2nd_team-test2.git # 깃허브 주소
+    targetRevision: main
+    path: system/argocd # ArgoCD Application YAML들이 모여있는 폴더 경로
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd # Application 자체는 argocd 네임스페이스에 생성되어야 함
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

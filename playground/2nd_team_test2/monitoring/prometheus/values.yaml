@@ -1,0 +1,81 @@
+prometheus:
+  prometheusSpec:
+    scrapeInterval: "1m"
+    evaluationInterval: "1m"
+    nodeSelector:
+      dedicated: "monitoring"
+    tolerations:
+      - key: dedicated
+        operator: Equal
+        value: monitoring
+        effect: NoSchedule
+    externalLabels:
+      cluster_id: "finops-k3s"
+    retention: 10d
+    retentionSize: "4GB"
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 5Gi
+    resources:
+      requests:
+        cpu: "200m"
+        memory: "512Mi"
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+    serviceMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+
+prometheusOperator:
+  nodeSelector:
+    dedicated: "monitoring"
+  tolerations:
+    - key: dedicated
+      operator: Equal
+      value: monitoring
+      effect: NoSchedule
+
+prometheus-node-exporter:
+  prometheus:
+    monitor:
+      enabled: true
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_node_name]
+          targetLabel: node
+          action: replace
+        - sourceLabels: [__meta_kubernetes_pod_node_name]
+          targetLabel: instance
+          action: replace
+
+grafana:
+  adminPassword: "1234"
+  nodeSelector:
+    dedicated: "monitoring"
+  tolerations:
+    - key: dedicated
+      operator: Equal
+      value: monitoring
+      effect: NoSchedule
+  persistence:
+    enabled: true
+    type: pvc
+    size: 500Mi
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "128Mi"
+    limits:
+      cpu: "200m"
+      memory: "512Mi"
+  grafana.ini:
+    dashboards:
+      min_refresh_interval: 1s
+  dashboards:
+    default:
+      kubecost-official:
+        url: "https://raw.githubusercontent.com/kubecost/cost-analyzer-helm-chart/develop/cost-analyzer/dashboards/cost-overview.json"
+        datasource: Prometheus

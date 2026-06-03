@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd-self
+  namespace: argocd
+spec:
+  project: default
+  # 여기부터가 핵심입니다! source(단수) -> sources(복수)로 변경
+  sources:
+    - chart: argo-cd
+      repoURL: https://argoproj.github.io/argo-helm
+      targetRevision: 5.51.6 # 사용할 ArgoCD Helm 차트 버전
+      helm:
+        valueFiles:
+          - $values/system/argocd/values.yaml # 내 깃허브의 values 파일 연결
+    - repoURL: https://github.com/iaminpwd/2nd_team-test2.git
+      targetRevision: main
+      ref: values
+  # 여기까지 변경됨
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true # ArgoCD 자체도 리소스가 꽤 되므로 켜주는 것이 좋습니다.
+    automated:
+      prune: true
+      selfHeal: true

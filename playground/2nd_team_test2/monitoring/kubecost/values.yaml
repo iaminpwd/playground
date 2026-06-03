@@ -1,0 +1,65 @@
+global:
+  clusterId: "finops-k3s"
+  prometheus:
+    enabled: false 
+    fqdn: "http://prometheus-stack-kube-prom-prometheus.monitoring.svc:9090"
+  grafana:
+    enabled: false
+    proxy: false 
+
+serviceMonitor:
+  enabled: true
+prometheusRule:
+  enabled: true
+
+kubecostFrontend:
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "10m"
+    limits:
+      memory: "128Mi"
+  livenessProbe:
+    initialDelaySeconds: 60
+    periodSeconds: 20
+
+kubecostProductConfigs:
+  grafanaURL: ""
+
+  # AWS Cost Explorer 연동을 위한 설정
+  projectID: "719030485166" 
+  awsServiceKeyName: ""       
+  awsServiceKeyPassword: ""   
+
+forecasting:
+  enabled: false
+
+kubecostModel:
+  retentionDaily: 3
+  retentionHourly: 3
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "50m"
+    limits:
+      memory: "512Mi"
+
+kubecostAggregator:
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "50m"
+    limits:
+      memory: "512Mi"
+
+customPricing:
+  enabled: false
+
+nodeSelector:
+  dedicated: "monitoring"
+
+tolerations:
+  - key: dedicated
+    operator: Equal
+    value: monitoring
+    effect: NoSchedule

@@ -1,0 +1,51 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kubecost
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  
+  # --- 하나로 완벽하게 통합된 예외 처리 블록 ---
+  ignoreDifferences:
+    - group: "apps"
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/metadata/annotations
+        - /spec/template/metadata/labels/helm-rollout-restarter
+        - /metadata/annotations/helm-rollout-restarter
+        - /spec/template/metadata/annotations/helm-rollout-restarter
+    - group: ""
+      kind: Service
+      jsonPointers:
+        - /spec/clusterIP
+    - group: "rbac.authorization.k8s.io"
+      kind: ClusterRole
+      jsonPointers:
+        - /rules
+  # ---------------------------------------------
+
+  sources:
+    - chart: cost-analyzer
+      repoURL: https://kubecost.github.io/cost-analyzer/
+      targetRevision: 2.3.1
+      helm:
+        valueFiles:
+          - $values/monitoring/kubecost/values.yaml
+    - repoURL: https://github.com/iaminpwd/2nd_team-test2.git
+      targetRevision: main
+      ref: values
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    automated:
+      prune: true
+      selfHeal: true
