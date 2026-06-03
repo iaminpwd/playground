@@ -1,0 +1,29 @@
+# ArgoCD App of Apps 패턴의 루트 앱
+# 이 앱이 argocd-apps/ 디렉토리를 감시하여 하위 앱들을 자동으로 배포합니다.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-root
+  namespace: argocd
+  finalizers:
+    # 앱 삭제 시 연관된 K8s 리소스도 함께 정리
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/iaminpwd/argocd-test-repo.git
+    # main 브랜치 기준으로 배포 (재시작 시 minseok으로 롤백될 수 있으므로 주의)
+    targetRevision: main
+    path: argocd-apps
+    directory:
+      # 하위 디렉토리까지 재귀적으로 탐색하여 모든 앱 등록
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      # Git에서 삭제된 리소스는 클러스터에서도 삭제
+      prune: true
+      # 클러스터 상태가 Git과 달라지면 자동으로 복구
+      selfHeal: true

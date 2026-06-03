@@ -1,0 +1,15 @@
+# node-cleanup 서비스 계정에 ClusterRole 권한을 부여합니다.
+# 네임스페이스(node-cleanup)에 속한 서비스 계정이지만,
+# 노드는 클러스터 전역 리소스이므로 ClusterRoleBinding으로 바인딩합니다.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: node-cleanup
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: node-cleanup
+subjects:
+- kind: ServiceAccount
+  name: node-cleanup
+  namespace: node-cleanup

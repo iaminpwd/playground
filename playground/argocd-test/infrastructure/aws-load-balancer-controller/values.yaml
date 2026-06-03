@@ -1,0 +1,24 @@
+# 이 컨트롤러가 관리할 K3s 클러스터 이름 (ASG 태그 검색에 사용)
+clusterName: my-k3s
+region: ap-northeast-2
+
+replicaCount: 1
+
+serviceAccount:
+  create: true
+  name: aws-load-balancer-controller
+
+# TargetGroupBinding 웹훅 비활성화 (K3s 환경에서 불필요)
+enableServiceMutatorWebhook: false
+# K3s 환경에서는 instance 타입 필수 (ip 타입은 VPC CNI 필요)
+defaultTargetType: instance
+
+# platform 전용 노드에만 스케줄링
+nodeSelector:
+  dedicated: platform
+
+tolerations:
+  - key: dedicated
+    operator: Equal
+    value: platform
+    effect: NoSchedule

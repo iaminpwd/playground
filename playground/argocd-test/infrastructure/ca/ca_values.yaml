@@ -1,0 +1,53 @@
+cloudProvider: aws
+awsRegion: ap-northeast-2
+
+autoDiscovery:
+  clusterName: my-k3s
+  # CA가 ASG를 찾을 때 사용하는 태그입니다.
+  tags:
+    - k8s.io/cluster-autoscaler/enabled
+    - k8s.io/cluster-autoscaler/my-k3s
+
+# Cluster Autoscaler를 dedicated=platform 노드에 고정합니다.
+nodeSelector:
+  dedicated: platform
+
+# dedicated=platform 테인트를 허용해 해당 노드에 스케줄링되도록 합니다.
+tolerations:
+  - key: "dedicated"
+    operator: "Equal"
+    value: "platform"
+    effect: "NoSchedule"
+
+extraArgs:
+  v: 4
+  cloud-provider: aws
+  # 이 태그가 달린 ASG를 자동으로 감지하여 노드 그룹으로 관리합니다.
+  node-group-auto-discovery: asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/my-k3s
+  # 시스템 파드가 있는 노드는 스케일 다운 대상에서 제외합니다.
+  skip-nodes-with-system-pods: "true"
+  # 로컬 스토리지가 있는 노드도 스케일 다운 허용합니다.
+  skip-nodes-with-local-storage: "false"
+  # 비슷한 노드 그룹 간 균형 있게 스케일 업합니다.
+  balance-similar-node-groups: "true"
+  # 가장 낭비가 적은 노드 그룹을 우선 선택하는 확장 전략입니다.
+  expander: least-waste
+  # 환경에 따라 명시적인 cloud config 경로가 필요하면 주석을 해제하세요.
+  # cloud-config: /etc/ssl/certs/ca-certificates.crt
+
+rbac:
+  create: true
+  serviceAccount:
+    create: true
+    name: cluster-autoscaler
+    # K3s는 IRSA 대신 노드 IAM Instance Profile 권한을 사용합니다.
+    annotations: {}
+
+# 메트릭 노출 설정 (Prometheus ServiceMonitor와 연동)
+service:
+  create: true
+  port: 8085
+
+serviceMonitor:
+  enabled: true
+  namespace: monitoring

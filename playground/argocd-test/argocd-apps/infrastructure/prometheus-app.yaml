@@ -1,0 +1,61 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+
+# [1. 메타데이터 및 삭제 정책]
+# 기능: ArgoCD에서 관리할 앱의 이름(prometheus-stack)과 위치를 정의합니다. 'finalizers'는 앱 삭제 시 K8s에 배포된 프로메테우스 관련 리소스들(Deployment, Service 등)을 고아(Orphan) 상태로 남기지 않고 함께 깨끗하게 지워주는 중요한 안전장치입니다.
+metadata:
+  name: prometheus-stack
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+
+spec:
+  project: default
+  
+  # [2. 배포 소스 정의 (Multi-source 패턴)]
+  # 기능: 두 개의 다른 저장소를 하나로 합쳐서 배포합니다. 
+  # (1) 프로메테우스 커뮤니티의 '공식 Helm 차트'를 원본으로 가져오되,
+  # (2) 우리 팀의 Git 저장소(kt-cloud-finops-team5)를 참조(ref: values)하여 커스텀 values.yaml을 덮어씌웁니다. 차트 원본을 건드리지 않고 설정만 분리해서 관리할 수 있어 유지보수에 매우 유리합니다.
+  sources: 
+    # (1) Helm 차트 원본 설정
+    - chart: kube-prometheus-stack
+      repoURL: https://prometheus-community.github.io/helm-charts
+      targetRevision: 51.2.0
+      helm:
+        valueFiles:
+          - $values/infrastructure/monitoring/prometheus/values.yaml
+          - $values/infrastructure/monitoring/prometheus/grafana-alerts.yaml 
+    # (2) 우리 팀의 커스텀 값(values) 참조용 Git 설정
+    - repoURL: https://github.com/iaminpwd/argocd-test-repo.git
+      targetRevision: main  
+      ref: values
+      
+  # [3. 배포 목적지 (Target 클러스터)]
+  # 기능: 위에서 조합한 매니페스트를 최종적으로 설치할 타겟 클러스터(현재 K8s 내부)와 네임스페이스(monitoring)를 지정합니다.
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  # [4. 차이 무시 설정]
+  # 기능: unknown 상태인 노드에서 node-exporter 파드가 못 뜨는 건 노드 장애로 인한 것이며 설정 문제가 아닙니다.
+  # ArgoCD가 node-exporter DaemonSet의 status(READY 수)를 Sync 비교 대상에서 제외하여,
+  # 노드 장애로 인한 READY 불일치가 OutOfSync/Degraded 루프를 유발하지 않도록 방지합니다.
+  ignoreDifferences:
+    - group: apps
+      kind: DaemonSet
+      name: prometheus-stack-prometheus-node-exporter
+      jsonPointers:
+        - /status
+
+  # [5. GitOps 자동화 및 동기화 정책]
+  # 기능: Git 저장소의 상태를 K8s에 자동으로 일치시키는 정책 묶음입니다.
+  # automated 하위 설정으로 Git에서 삭제된 코드는 실제 K8s에서도 지우고(prune), 누군가 임의로 수정해도 Git 상태로 강제 원복(selfHeal) 시킵니다.
+  # syncOptions를 통해 monitoring 네임스페이스가 없으면 자동 생성(CreateNamespace)하며, CRD처럼 크기가 큰 리소스 배포 시 발생하는 오류를 막기 위해 K8s 서버 단에서 리소스를 병합(ServerSideApply)합니다.
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true

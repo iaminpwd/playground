@@ -1,0 +1,32 @@
+# monitoring 네임스페이스에 배포할 리소스 목록을 관리하는 Kustomize 설정 파일
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # Prometheus Recording Rule 정의 (사전 계산 지표: SLA, 매출, 비용 등)
+  - prometheus-recording-rules.yaml
+
+configMapGenerator:
+  # FINOPS 대시보드 ConfigMap 자동 생성
+  # dashboards/dashboard-finops.json 파일을 ConfigMap으로 패키징
+  - name: finops-dashboard
+    namespace: monitoring
+    options:
+      # 해시 접미사 비활성화 — Grafana sidecar가 고정된 이름으로 대시보드를 참조하기 위함
+      disableNameSuffixHash: true
+      labels:
+        # 이 라벨이 있어야 Grafana sidecar가 자동으로 대시보드를 로드
+        grafana_dashboard: "1"
+    files:
+      - dashboard-finops.json=dashboards/dashboard-finops.json
+
+  # OPS 대시보드 ConfigMap 자동 생성
+  # dashboards/dashboard-ops.json 파일을 ConfigMap으로 패키징
+  - name: ops-dashboard
+    namespace: monitoring
+    options:
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"
+    files:
+      - dashboard-ops.json=dashboards/dashboard-ops.json

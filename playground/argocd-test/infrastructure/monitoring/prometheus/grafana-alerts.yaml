@@ -1,0 +1,216 @@
+# FILE_PATH: monitoring/prometheus/grafana-alerts.yaml
+grafana:
+  alerting:
+    # 1. contactpoints.yaml: 알람을 어디로 보낼지(디스코드) 목적지와 기본 설정을 정의
+    contactpoints.yaml:
+      apiVersion: 1
+      contactPoints:
+        # 기본 목적지: 장애/경고 알람용 (NTH 알람 등이 여기로 옴)
+        - orgId: 1
+          name: 'Discord-Alerts'
+          receivers:
+            - uid: 'discord-infra'
+              type: 'discord'
+              disableResolveMessage: true  # ✅ 복구(종료) 완료 메시지 발송 차단!
+              settings:
+                url: 'https://discord.com/api/webhooks/1486280152852729997/5NPlRkbY6r4D7fA7wOfy-QYyONAseQ_2CJe2_3KUs3iR7PjV6pLrFYIf1divnfxKfHGa'
+                # Helm 엔진이 파싱하지 않도록 {{`{{ ... }}`}} 형태로 이스케이프 처리.
+                title: '{{`{{ template "discord.title" . }}`}}'
+                message: '{{`{{ template "discord.message" . }}`}}'
+
+        # 신규 목적지: 정보성(info) 알람용 (CA 알람 등이 여기로 옴)
+        - orgId: 1
+          name: 'Discord-Info-Alerts'
+          receivers:
+            - uid: 'discord-info-infra'
+              type: 'discord'
+              disableResolveMessage: true  # 복구 완료 메시지 발송 차단!
+              settings:
+                url: 'https://discord.com/api/webhooks/1486280152852729997/5NPlRkbY6r4D7fA7wOfy-QYyONAseQ_2CJe2_3KUs3iR7PjV6pLrFYIf1divnfxKfHGa'
+                title: '{{`{{ template "discord.title" . }}`}}'
+                message: '{{`{{ template "discord.message" . }}`}}'
+
+    # 2. templates.yaml: 알림 템플릿
+    templates.yaml:
+      apiVersion: 1
+      templates:
+        - orgId: 1
+          name: 'discord-template'
+          template: |
+            {{`{{ define "discord.title" }}`}}
+            {{`{{ if eq .Status "firing" }}`}}🔔 [인프라 알림] 상태 업데이트{{`{{ else }}`}}✅ [알림 종료] 이벤트 완료{{`{{ end }}`}}
+            {{`{{ end }}`}}
+
+            {{`{{ define "discord.message" }}`}}
+            {{`{{ range .Alerts }}`}}
+            **🚨 알람명:** {{`{{ .Labels.alertname }}`}}
+            **⚠️ 심각도:** `{{`{{ .Labels.severity }}`}}`
+            **📝 요약:** {{`{{ .Annotations.summary }}`}}
+            **🔍 상세내용:** {{`{{ .Annotations.description }}`}}
+            **⏰ 발생시간:** {{`{{ .StartsAt.Format "2006-01-02 15:04:05" }}`}}
+            -------------------------------------------
+            {{`{{ end }}`}}
+            {{`{{ end }}`}}
+
+    # 3. policies.yaml: 어떤 규칙(Rules)이 발생했을 때 어느 목적지(Discord)로 보낼지 연결하고 알람 주기를 설정
+    policies.yaml:
+      apiVersion: 1
+      policies:
+        - orgId: 1
+          receiver: 'Discord-Alerts' # 기본 목적지 (Warning, Error 등)
+          group_by: ['grafana_folder', 'alertname']
+          group_wait: 20s
+          group_interval: 1m
+          repeat_interval: 4h
+          # 하위 정책(Nested Policy) 추가: 심각도가 info인 경우 Discord-Info-Alerts로 라우팅
+          policies:
+            - receiver: 'Discord-Info-Alerts'
+              matchers:
+                - "severity=info"
+
+    # 4. rules.yaml: CA 및 NTH 알람 규칙 정의
+    rules.yaml:
+      apiVersion: 1
+      groups:
+        - orgId: 1
+          name: 'FinOps-Critical-Rules'
+          folder: 'Infrastructure'
+          interval: '1m'
+          rules:
+            # 노드 스케일 업 (확장)
+            - uid: 'alert-ca-scale-up'
+              title: 'ClusterAutoscalerScaledUp'
+              condition: 'C'
+              noDataState: 'OK'
+              execErrState: 'OK' # 일시적인 통신 에러 시 오알람 방지
+              for: '1m'
+              data:
+                - refId: 'A'
+                  relativeTimeRange:
+                    from: 300
+                    to: 0
+                  datasourceUid: 'prometheus'
+                  model:
+                    refId: 'A'
+                    expr: 'sum(increase(cluster_autoscaler_scaled_up_nodes_total[5m])) OR vector(0)'
+                - refId: 'B'
+                  datasourceUid: '__expr__'
+                  model:
+                    refId: 'B'
+                    type: 'reduce'
+                    expression: 'A'
+                    reducer: 'last'
+                - refId: 'C'
+                  datasourceUid: '__expr__'
+                  model:
+                    refId: 'C'
+                    type: 'math'
+                    expression: '$B > 0'
+                - refId: 'D'
+                  relativeTimeRange:
+                    from: 300
+                    to: 0
+                  datasourceUid: 'prometheus'
+                  model:
+                    refId: 'D'
+                    expr: 'count(kube_node_info) OR vector(0)'
+                - refId: 'E'
+                  datasourceUid: '__expr__'
+                  model:
+                    refId: 'E'
+                    type: 'reduce'
+                    expression: 'D'
+                    reducer: 'last'
+              labels:
+                severity: 'info'
+                alertname: '노드 스케일 아웃 (Scale-Up) 발생'
+              annotations:
+                summary: 'Cluster Autoscaler 노드 추가'
+                description: '파드 스케줄링 리소스 부족으로 인해 워커 노드가 추가되었습니다. (현재 총 노드 개수: {{`{{ if $values.E }}{{ printf "%.0f" $values.E.Value }}{{ else }}확인불가{{ end }}`}}개)'
+
+            # 노드 스케일 다운 (축소)
+            - uid: 'alert-ca-scale-down'
+              title: 'ClusterAutoscalerScaledDown'
+              condition: 'C'
+              noDataState: 'OK'
+              execErrState: 'OK' # 일시적인 통신 에러 시 오알람 방지
+              for: '1m'
+              data:
+                - refId: 'A'
+                  relativeTimeRange:
+                    from: 300
+                    to: 0
+                  datasourceUid: 'prometheus'
+                  model:
+                    refId: 'A'
+                    expr: 'sum(increase(cluster_autoscaler_scaled_down_nodes_total[5m])) OR vector(0)'
+                - refId: 'B'
+                  datasourceUid: '__expr__'
+                  model:
+                    refId: 'B'
+                    type: 'reduce'
+                    expression: 'A'
+                    reducer: 'last'
+                - refId: 'C'
+                  datasourceUid: '__expr__'
+                  model:
+                    refId: 'C'
+                    type: 'math'
+                    expression: '$B > 0'
+                - refId: 'D'
+                  relativeTimeRange:
+                    from: 300
+                    to: 0
+                  datasourceUid: 'prometheus'
+                  model:
+                    refId: 'D'
+                    expr: 'count(kube_node_info) OR vector(0)'
+                - refId: 'E'
+                  datasourceUid: '__expr__'
+                  model:
+                    refId: 'E'
+                    type: 'reduce'
+                    expression: 'D'
+                    reducer: 'last'
+              labels:
+                severity: 'info'
+                alertname: '노드 스케일 인 (Scale-Down) 발생'
+              annotations:
+                summary: 'Cluster Autoscaler 노드 제거'
+                description: '클러스터 내 유휴 리소스가 발생하여 노드가 축소되었습니다. (현재 총 노드 개수: {{`{{ if $values.E }}{{ printf "%.0f" $values.E.Value }}{{ else }}확인불가{{ end }}`}}개)'
+
+            # NTH 스팟 인스턴 중단 감지 (Spot Interruption)
+            - uid: 'alert-nth-spot-interruption'
+              title: 'SpotInstanceInterruptionDetected'
+              condition: 'C'
+              noDataState: 'OK'
+              execErrState: 'OK' # 일시적인 통신 에러 시 오알람 방지
+              for: '1m'
+              data:
+                - refId: 'A'
+                  relativeTimeRange:
+                    from: 300
+                    to: 0
+                  datasourceUid: 'prometheus'
+                  model:
+                    refId: 'A'
+                    expr: '(sum(actions_node{node_action="cordon-and-drain", node_status="success"}) OR vector(0)) - (sum(actions_node{node_action="cordon-and-drain", node_status="success"} offset 5m) OR vector(0))'
+                - refId: 'B'
+                  datasourceUid: '__expr__'
+                  model:
+                    refId: 'B'
+                    type: 'reduce'
+                    expression: 'A'
+                    reducer: 'last'
+                - refId: 'C'
+                  datasourceUid: '__expr__'
+                  model:
+                    refId: 'C'
+                    type: 'math'
+                    expression: '$B > 0'
+              labels:
+                severity: 'warning'
+                alertname: '스팟 인스턴스 중단 감지 (Spot Interruption)'
+              annotations:
+                summary: 'AWS Spot Instance 중단 이벤트 발생'
+                description: 'AWS 인프라에서 스팟 인스턴스 회수(또는 재균형 권고) 이벤트가 감지되었습니다. NTH가 노드 차단(Cordon) 및 파드 퇴출(Drain)을 시작합니다.'

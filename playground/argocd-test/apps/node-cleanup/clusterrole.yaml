@@ -1,0 +1,12 @@
+# node-cleanup CronJob에 필요한 최소 권한만 부여합니다. (최소 권한 원칙)
+# 노드 목록 조회(get, list)와 삭제(delete)만 허용하며
+# 그 외 클러스터 리소스에는 접근할 수 없습니다.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: node-cleanup
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  # get: 특정 노드 상세 조회, list: 전체 노드 목록 조회, delete: 노드 삭제
+  verbs: ["get", "list", "delete"]

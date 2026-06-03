@@ -1,0 +1,9 @@
+# AWS Load Balancer Controller가 관리하는 ALB IngressClass 정의
+# ingressClassName: alb 로 지정된 Ingress 리소스를 이 컨트롤러가 처리
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: alb
+spec:
+  # AWS Load Balancer Controller의 공식 식별자
+  controller: ingress.k8s.aws/alb

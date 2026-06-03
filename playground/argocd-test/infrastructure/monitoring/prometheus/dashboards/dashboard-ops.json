@@ -1,0 +1,264 @@
+{
+  "annotations": {"list": [{"builtIn": 1,"datasource": {"type": "grafana","uid": "-- Grafana --"},"enable": true,"hide": true,"iconColor": "rgba(0, 211, 255, 1)","name": "Annotations & Alerts","type": "dashboard"}]},
+  "description": "Ops Dashboard","editable": true,"fiscalYearStartMonth": 0,"graphTooltip": 0,"links": [],"style": "light",
+  "panels": [
+    {
+      "description": "전체 HTTP 요청 중 2xx 성공 응답 비율. 99.9% 이상 정상, 99% 미만 위반.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},"decimals": 1,"mappings": [
+            {"options": {"from": 99.9,"result": {"color": "#2E7D32","index": 0,"text": "SLA 정상 가동중 ✅"},"to": 100.1},"type": "range"},
+            {"options": {"from": 99,"result": {"color": "#F57F17","index": 1,"text": "SLA 주의 ⚠️"},"to": 99.9},"type": "range"},
+            {"options": {"from": 0,"result": {"color": "#B71C1C","index": 2,"text": "SLA 위반 ❌"},"to": 99},"type": "range"}
+          ],
+          "max": 100,"min": 0,"thresholds": {"mode": "absolute","steps": [{"color": "#B71C1C","value": null},{"color": "#F57F17","value": 99},{"color": "#2E7D32","value": 99.9}]},"unit": "percent"
+        },"overrides": []
+      },
+      "gridPos": {"h": 7,"w": 8,"x": 0,"y": 0},"id": 1,
+      "options": {"colorMode": "background","graphMode": "none","justifyMode": "center","orientation": "auto","reduceOptions": {"calcs": ["lastNotNull"],"fields": "","values": false},"text": {"valueSize": 38},"textMode": "auto","wideLayout": false},
+      "targets": [{"datasource": {"type": "prometheus","uid": "prometheus"},"expr": "sla_attainment_ratio * 100","legendFormat": "SLA %","range": true,"refId": "A"}],
+      "title": "SLA ATTAINMENT","type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus","uid": "prometheus"},
+      "description": "파드별 CPU 사용률 / CPU Request 비율 최댓값. 0.8 이상이면 클러스터 부하 위험 수준.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},"decimals": 1,"mappings": [],"max": 1,"min": 0,
+          "thresholds": {"mode": "absolute","steps": [{"color": "#2E7D32","value": null},{"color": "#F57F17","value": 0.5},{"color": "#B71C1C","value": 0.8}]},
+          "unit": "percentunit"
+        },"overrides": []
+      },
+      "gridPos": {"h": 7,"w": 8,"x": 8,"y": 0},"id": 8,
+      "options": {"colorMode": "background","graphMode": "area","justifyMode": "center","orientation": "auto","reduceOptions": {"calcs": ["lastNotNull"],"fields": "","values": false},"text": {"valueSize": 38},"textMode": "auto","wideLayout": false},
+      "targets": [{"datasource": {"type": "prometheus","uid": "prometheus"},"expr": "max(anomaly_score)","legendFormat": "Max Anomaly","range": true,"refId": "A"}],
+      "title": "CLUSTER ANOMALY SCORE","type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus","uid": "prometheus"},
+      "description": "현재 CPU 사용 추세 기준으로 클러스터 CPU가 고갈될 때까지 남은 예상 시간.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},"decimals": 0,"mappings": [],
+          "thresholds": {"mode": "absolute","steps": [{"color": "#B71C1C","value": null},{"color": "#F57F17","value": 300},{"color": "#2E7D32","value": 600}]},
+          "unit": "s"
+        },"overrides": []
+      },
+      "gridPos": {"h": 7,"w": 8,"x": 16,"y": 0},"id": 9,
+      "options": {"colorMode": "background","graphMode": "none","justifyMode": "center","orientation": "auto","reduceOptions": {"calcs": ["last"],"fields": "","values": false},"text": {"valueSize": 38},"textMode": "auto","wideLayout": false},
+      "targets": [{"datasource": {"type": "prometheus","uid": "prometheus"},"editorMode": "code","expr": "min(\n  (\n    sum(kube_node_status_allocatable{resource=\"cpu\"}) by (node)\n    - sum(rate(container_cpu_usage_seconds_total{container!=\"\"}[5m])) by (node)\n  )\n  / sum(rate(container_cpu_usage_seconds_total{container!=\"\"}[5m])) by (node)\n) * 3600","legendFormat": "Time to Scale","range": true,"refId": "A"}],
+      "title": "PREDICTED TIME-TO-SCALE","type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus","uid": "prometheus"},
+      "description": "노드별 실제 CPU 사용률. kubectl top nodes 수치와 동일한 기준. 노랑 60%, 빨강 80% 경고.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisCenteredZero": false,"axisColorMode": "text","axisLabel": "CPU %","axisPlacement": "auto",
+            "drawStyle": "line","fillOpacity": 0,"gradientMode": "none",
+            "hideFrom": {"legend": false,"tooltip": false,"viz": false},
+            "insertNulls": false,"lineInterpolation": "linear","lineWidth": 2,"pointSize": 5,
+            "scaleDistribution": {"type": "linear"},"showPoints": "never","spanNulls": false,
+            "stacking": {"group": "A","mode": "none"},
+            "thresholdsStyle": {"mode": "area"}
+          },
+          "mappings": [],"max": 100,"min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "transparent","value": null},
+              {"color": "rgba(255, 235, 59, 0.15)","value": 60},
+              {"color": "rgba(244, 67, 54, 0.15)","value": 80}
+            ]
+          },
+          "unit": "percent"
+        },"overrides": []
+      },
+      "gridPos": {"h": 8,"w": 12,"x": 0,"y": 7},"id": 17,
+      "options": {
+        "legend": {"calcs": ["mean","max","lastNotNull"],"displayMode": "table","placement": "bottom","showLegend": true},
+        "tooltip": {"mode": "multi","sort": "desc"}
+      },
+      "targets": [{"datasource": {"type": "prometheus","uid": "prometheus"},"expr": "(1 - avg by (node) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))) * 100","legendFormat": "{{node}}","range": true,"refId": "A"}],
+      "title": "NODE CPU 사용률","type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus","uid": "prometheus"},
+      "description": "노드별 실제 메모리 사용률. kubectl top nodes 수치와 동일한 기준. 노랑 60%, 빨강 80% 경고.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisCenteredZero": false,"axisColorMode": "text","axisLabel": "MEM %","axisPlacement": "auto",
+            "drawStyle": "line","fillOpacity": 0,"gradientMode": "none",
+            "hideFrom": {"legend": false,"tooltip": false,"viz": false},
+            "insertNulls": false,"lineInterpolation": "linear","lineWidth": 2,"pointSize": 5,
+            "scaleDistribution": {"type": "linear"},"showPoints": "never","spanNulls": false,
+            "stacking": {"group": "A","mode": "none"},
+            "thresholdsStyle": {"mode": "area"}
+          },
+          "mappings": [],"max": 100,"min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "transparent","value": null},
+              {"color": "rgba(255, 235, 59, 0.15)","value": 60},
+              {"color": "rgba(244, 67, 54, 0.15)","value": 80}
+            ]
+          },
+          "unit": "percent"
+        },"overrides": []
+      },
+      "gridPos": {"h": 8,"w": 12,"x": 12,"y": 7},"id": 18,
+      "options": {
+        "legend": {"calcs": ["mean","max","lastNotNull"],"displayMode": "table","placement": "bottom","showLegend": true},
+        "tooltip": {"mode": "multi","sort": "desc"}
+      },
+      "targets": [{"datasource": {"type": "prometheus","uid": "prometheus"},"expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100","legendFormat": "{{node}}","range": true,"refId": "A"}],
+      "title": "NODE MEM 사용률","type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus","uid": "prometheus"},
+      "description": "실제 HTTP 요청 수(점)와 30분 예측 추세선(점선). 노란 구간 주의, 빨간 구간 위험.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"fixedColor": "#1565C0","mode": "fixed"},
+          "custom": {
+            "axisCenteredZero": false,"axisColorMode": "text","axisLabel": "Requests","axisPlacement": "auto",
+            "drawStyle": "line","fillOpacity": 15,"gradientMode": "opacity",
+            "hideFrom": {"legend": false,"tooltip": false,"viz": false},
+            "insertNulls": false,"lineInterpolation": "smooth","lineWidth": 2,"pointSize": 4,
+            "scaleDistribution": {"type": "linear"},"showPoints": "never","spanNulls": false,
+            "stacking": {"group": "A","mode": "none"},
+            "thresholdsStyle": {"mode": "area"}
+          },
+          "mappings": [],"min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "transparent","value": null},
+              {"color": "rgba(255, 235, 59, 0.15)","value": 25},
+              {"color": "rgba(244, 67, 54, 0.15)","value": 35}
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName","options": "Predicted"},
+            "properties": [
+              {"id": "color","value": {"fixedColor": "#9E9E9E","mode": "fixed"}},
+              {"id": "custom.lineWidth","value": 2},
+              {"id": "custom.lineStyle","value": {"dash": [5,5],"fill": "dash"}},
+              {"id": "custom.showPoints","value": "never"},
+              {"id": "custom.fillOpacity","value": 0},
+              {"id": "custom.drawStyle","value": "line"}
+            ]
+          }
+        ]
+      },
+      "gridPos": {"h": 8,"w": 14,"x": 0,"y": 15},"id": 7,
+      "options": {
+        "legend": {"calcs": [],"displayMode": "list","placement": "bottom","showLegend": true},
+        "tooltip": {"hideZeros": false,"mode": "multi","sort": "none"}
+      },
+      "targets": [
+        {"datasource": {"type": "prometheus","uid": "prometheus"},"editorMode": "code","expr": "sum(rate(traces_span_metrics_calls_total[$__rate_interval]))","legendFormat": "Actual","range": true,"refId": "A"},
+        {"datasource": {"type": "prometheus","uid": "prometheus"},"editorMode": "code","expr": "predict_linear(sum(rate(traces_span_metrics_calls_total[$__rate_interval]))[30m:5m], 1800)","legendFormat": "Predicted","range": true,"refId": "B"}
+      ],
+      "title": "TRAFFIC OVERVIEW","type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus","uid": "prometheus"},
+      "description": "메모리 초과로 강제 종료된 파드 현황. OOMKill 발생 시 즉시 확인 필요.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},"decimals": 0,
+          "mappings": [
+            {"options": {"from": 0,"result": {"color": "#2E7D32","index": 0,"text": "OOMKill 없음 ✅"},"to": 0.9},"type": "range"},
+            {"options": {"from": 1,"result": {"color": "#B71C1C","index": 1,"text": "OOMKill 발생 ❌"},"to": 99999},"type": "range"}
+          ],
+          "noValue": "OOMKill 없음 ✅",
+          "thresholds": {"mode": "absolute","steps": [{"color": "#2E7D32","value": null},{"color": "#B71C1C","value": 1}]},
+          "unit": "short"
+        },"overrides": []
+      },
+      "gridPos": {"h": 8,"w": 5,"x": 14,"y": 15},"id": 13,
+      "options": {"colorMode": "background","graphMode": "none","justifyMode": "center","orientation": "auto","reduceOptions": {"calcs": ["lastNotNull"],"fields": "","values": false},"text": {"valueSize": 28},"textMode": "auto","wideLayout": false},
+      "targets": [{"datasource": {"type": "prometheus","uid": "prometheus"},"expr": "sum(kube_pod_container_status_last_terminated_reason{reason=\"OOMKilled\", namespace=~\"$namespace\"})","legendFormat": "OOMKilled","range": true,"refId": "A"}],
+      "title": "OOMKILLED PODS","type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus","uid": "prometheus"},
+      "description": "네임스페이스별 네트워크 수신(파랑)과 송신(주황) 트래픽. 단위는 bytes/sec 자동 변환.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"fixedColor": "#1565C0","mode": "fixed"},
+          "custom": {
+            "drawStyle": "line","fillOpacity": 15,"gradientMode": "opacity",
+            "hideFrom": {"legend": false,"tooltip": false,"viz": false},
+            "insertNulls": false,"lineInterpolation": "smooth","lineWidth": 2,"pointSize": 5,
+            "scaleDistribution": {"type": "linear"},"showPoints": "never","spanNulls": false,
+            "stacking": {"group": "A","mode": "none"},"thresholdsStyle": {"mode": "off"}
+          },
+          "mappings": [],"thresholds": {"mode": "absolute","steps": [{"color": "green","value": null}]},"unit": "Bps"
+        },
+        "overrides": [
+          {"matcher": {"id": "byRegexp","options": "^Inbound.*"},"properties": [{"id": "color","value": {"fixedColor": "#1565C0","mode": "fixed"}}]},
+          {"matcher": {"id": "byRegexp","options": "^Outbound.*"},"properties": [
+            {"id": "color","value": {"fixedColor": "#F57F17","mode": "fixed"}},
+            {"id": "custom.fillOpacity","value": 15},
+            {"id": "custom.gradientMode","value": "opacity"}
+          ]}
+        ]
+      },
+      "gridPos": {"h": 8,"w": 5,"x": 19,"y": 15},"id": 14,
+      "options": {
+        "legend": {"calcs": ["mean","max"],"displayMode": "table","placement": "bottom","showLegend": true},
+        "tooltip": {"hideZeros": false,"mode": "multi","sort": "none"}
+      },
+      "targets": [
+        {"datasource": {"type": "prometheus","uid": "prometheus"},"expr": "sum(rate(container_network_receive_bytes_total{namespace=~\"$namespace\"}[5m])) by (namespace)","legendFormat": "Inbound — {{namespace}}","range": true,"refId": "A"},
+        {"datasource": {"type": "prometheus","uid": "prometheus"},"expr": "sum(rate(container_network_transmit_bytes_total{namespace=~\"$namespace\"}[5m])) by (namespace)","legendFormat": "Outbound — {{namespace}}","range": true,"refId": "B"}
+      ],
+      "title": "NETWORK I/O","type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus","uid": "prometheus"},
+      "description": "otel-shop 주요 서비스 파드 Ready 상태 타임라인. 초록 정상, 주황 부분 장애, 빨강 다운.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "custom": {"fillOpacity": 70,"hideFrom": {"legend": false,"tooltip": false,"viz": false},"insertNulls": false,"lineWidth": 0,"spanNulls": false},
+          "mappings": [
+            {"options": {"0": {"color": "#B71C1C","index": 0,"text": "Down ❌"}},"type": "value"},
+            {"options": {"from": 0.9,"result": {"color": "#2E7D32","index": 1,"text": "Up ✅"},"to": 1.1},"type": "range"},
+            {"options": {"from": 0.1,"result": {"color": "#F57F17","index": 2,"text": "부분 장애 ⚠️"},"to": 0.9},"type": "range"}
+          ],
+          "thresholds": {"mode": "absolute","steps": [{"color": "#B71C1C","value": null},{"color": "#F57F17","value": 0.5},{"color": "#2E7D32","value": 1}]}
+        },"overrides": []
+      },
+      "gridPos": {"h": 8,"w": 24,"x": 0,"y": 23},"id": 11,
+      "options": {"alignValue": "left","legend": {"displayMode": "list","placement": "bottom","showLegend": true},"mergeValues": true,"rowHeight": 0.9,"showValue": "always","tooltip": {"mode": "single","sort": "none"}},
+      "targets": [
+        {"datasource": {"type": "prometheus","uid": "prometheus"},"editorMode": "code","expr": "max(kube_pod_status_ready{namespace=\"otel-shop\", condition=\"true\", pod=~\"frontend-.*\"})","legendFormat": "frontend","range": true,"refId": "A"},
+        {"datasource": {"type": "prometheus","uid": "prometheus"},"editorMode": "code","expr": "max(kube_pod_status_ready{namespace=\"otel-shop\", condition=\"true\", pod=~\"cart-.*\"})","legendFormat": "cart","range": true,"refId": "B"},
+        {"datasource": {"type": "prometheus","uid": "prometheus"},"editorMode": "code","expr": "max(kube_pod_status_ready{namespace=\"otel-shop\", condition=\"true\", pod=~\"payment-.*\"})","legendFormat": "payment","range": true,"refId": "C"},
+        {"datasource": {"type": "prometheus","uid": "prometheus"},"editorMode": "code","expr": "max(kube_pod_status_ready{namespace=\"otel-shop\", condition=\"true\", pod=~\"shipping-.*\"})","legendFormat": "shipping","range": true,"refId": "D"},
+        {"datasource": {"type": "prometheus","uid": "prometheus"},"editorMode": "code","expr": "max(kube_pod_status_ready{namespace=\"otel-shop\", condition=\"true\", pod=~\"currency-.*\"})","legendFormat": "currency","range": true,"refId": "E"},
+        {"datasource": {"type": "prometheus","uid": "prometheus"},"editorMode": "code","expr": "max(kube_pod_status_ready{namespace=\"otel-shop\", condition=\"true\", pod=~\"ad-.*\"})","legendFormat": "ad","range": true,"refId": "F"}
+      ],
+      "title": "SERVICE AVAILABILITY GRID","type": "state-timeline"
+    }
+  ],
+  "refresh": "30s","schemaVersion": 38,
+  "tags": ["ops","k3s","otel-shop"],
+  "templating": {"list": [
+    {"allowCustomValue": true,"current": {"text": "Prometheus","value": "prometheus"},"hide": 0,"includeAll": false,"label": "Data Source","multi": false,"name": "datasource","options": [],"query": "prometheus","refresh": 1,"regex": "","type": "datasource"},
+    {"allowCustomValue": true,"current": {"text": "otel-shop","value": "otel-shop"},"datasource": {"type": "prometheus","uid": "prometheus"},"definition": "label_values(kube_pod_info, namespace)","hide": 0,"includeAll": true,"label": "NAMESPACE","multi": true,"name": "namespace","options": [],"query": {"label": "namespace","metric": "kube_pod_info","qryType": 1,"query": "label_values(kube_pod_info, namespace)","refId": "PrometheusVariableQueryEditor-VariableQuery"},"refresh": 2,"regex": "","skipUrlSync": false,"sort": 1,"type": "query"}
+  ]},
+  "time": {"from": "now-30m","to": "now"},"timepicker": {},"timezone": "browser",
+  "title": "OPS DASHBOARD","uid": "ops-dashboard","version": 1,"weekStart": ""
+}

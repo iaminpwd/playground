@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: my-app-hpa
+  namespace: argocd
+spec:
+  project: default
+  source:
+    # KT Cloud FinOps 5팀 공용 레포지토리 주소 적용
+    repoURL: 'https://github.com/iaminpwd/argocd-test-repo.git' 
+    targetRevision: main
+
+    # 해당 레포 내에서 HPA 관련 설정이 있는 폴더 경로
+    path: 'apps/otel-shop/web-tier-hpa' 
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: otel-shop
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
