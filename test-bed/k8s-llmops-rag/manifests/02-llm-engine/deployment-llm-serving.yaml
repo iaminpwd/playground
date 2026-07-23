@@ -1,0 +1,51 @@
+# FILE: ./manifests/02-llm-engine/deployment-llm-serving.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-llm-serving
+  namespace: llmops
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llm-serving
+  template:
+    metadata:
+      labels:
+        app: llm-serving
+    spec:
+      containers:
+      - name: ollama-engine
+        image: ollama/ollama:0.1.34
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 11434
+          name: llm-port
+        resources:
+          requests:
+            cpu: "2000m"
+            memory: "8Gi"
+          limits:
+            cpu: "3500m"
+            memory: "8Gi"
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "sleep 10 && ollama pull llama3 &"]
+        
+        # 중복된 ports 선언 블록 삭제 완료
+
+        startupProbe:
+          httpGet:
+            path: /
+            port: 11434
+          failureThreshold: 60
+          periodSeconds: 10
+          
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 11434
+          periodSeconds: 10

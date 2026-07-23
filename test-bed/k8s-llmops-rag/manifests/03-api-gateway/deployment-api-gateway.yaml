@@ -1,0 +1,35 @@
+# FILE: ./manifests/03-api-gateway/deployment-api-gateway.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-api-gateway
+  namespace: llmops
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  replicas: 1 # 이전 트러블슈팅에서 파악한 널뛰기 방지를 위해 1로 고정
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+      - name: api-gateway-container
+        image: llm-gateway:local
+        imagePullPolicy: IfNotPresent 
+        ports:
+        - containerPort: 8000 # 올바른 컨테이너 포트 속성 사용
+          name: http
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+          limits:
+            cpu: "1000m"
+            memory: "2Gi"
+        envFrom:
+        - configMapRef:
+            name: configmap-api-env

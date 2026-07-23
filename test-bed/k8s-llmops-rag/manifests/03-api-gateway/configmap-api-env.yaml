@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: configmap-api-env
+  namespace: llmops
+data:
+  OLLAMA_ENDPOINT: "http://service-llm-serving:11434/api/generate"
+  CHROMA_ENDPOINT: "http://service-vector-db:8000"

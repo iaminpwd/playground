@@ -1,0 +1,15 @@
+# FILE: ./manifests/03-api-gateway/service-api-gateway.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-api-gateway
+  namespace: llmops
+spec:
+  ports:
+  - port: 80
+    targetPort: 8000 # 8080에서 8000으로 동기화
+    protocol: TCP
+    name: http
+  selector:
+    app: api-gateway
+  type: ClusterIP
